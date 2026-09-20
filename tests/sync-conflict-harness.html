@@ -10,6 +10,7 @@
     window.BULL_CONFIG = { supabaseUrl: 'https://test.supabase.co', supabaseAnonKey: 'test-anon-key', teamSlug: 'bull-racing', syncDebounceMs: 5, remotePollMs: 60000 };
     const session = { user: { id: 'user-1', email: 'capitao@example.com' } };
     let fetchCount = 0;
+    let saveCount = 0;
     const fakeClient = {
         auth: {
             onAuthStateChange() { return { data: { subscription: { unsubscribe() {} } } }; },
@@ -27,8 +28,13 @@
                 }
             };
         },
-        rpc() {
-            return { async single() { return { data: { saved: false, new_version: 4, current_version: 4 }, error: null }; } };
+        rpc(name, payload) {
+            return { async single() {
+                saveCount += 1;
+                if (saveCount === 1) return { data: { saved: false, new_version: 4, current_version: 4 }, error: null };
+                window.lastMergedPayload = payload.p_data;
+                return { data: { saved: true, new_version: 5, current_version: 5 }, error: null };
+            } };
         }
     };
     window.supabase = { createClient() { return fakeClient; } };
@@ -43,10 +49,11 @@
         setTimeout(function () {
             const status = window.BullCloud.getStatus();
             const backup = localStorage.getItem('bull_cloud_pre_pull_backup_bull-racing');
-            const ok = status.remoteVersion === 4 && state.members.length === 1 && state.members[0].name === 'Remoto vencedor' && Boolean(backup);
+            const names = state.members.map(member => member.name);
+            const ok = status.remoteVersion === 5 && names.includes('Remoto vencedor') && names.includes('Edição conflitante') && window.lastMergedPayload?.members?.length === 2 && Boolean(backup);
             document.title = ok ? 'CONFLICT_TEST_PASS' : 'CONFLICT_TEST_FAIL';
             document.body.dataset.result = ok ? 'pass' : 'fail';
-            document.body.dataset.details = JSON.stringify({ status, state, fetchCount, hasBackup: Boolean(backup) });
+            document.body.dataset.details = JSON.stringify({ status, state, fetchCount, saveCount, lastMergedPayload, hasBackup: Boolean(backup) });
         }, 650);
     });
 </script>

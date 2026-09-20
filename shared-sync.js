@@ -26,6 +26,7 @@
     let pollTimer = null;
     let localSave = null;
     let lastLocalJson = '';
+    let lastSyncedState = null;
     let sessionQueue = Promise.resolve();
     let handledSessionToken = null;
 
@@ -41,6 +42,59 @@
 
     function clone(value) {
         return JSON.parse(JSON.stringify(value));
+    }
+
+    function sameValue(a, b) {
+        return JSON.stringify(a) === JSON.stringify(b);
+    }
+
+    function isPlainObject(value) {
+        return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    // Combina mudancas feitas em navegadores diferentes usando a ultima versao
+    // sincronizada como base. Em choque no mesmo campo, preserva a edicao local.
+    function mergeStates(base, local, remote) {
+        if (sameValue(local, base)) return clone(remote);
+        if (sameValue(remote, base) || sameValue(local, remote)) return clone(local);
+
+        if (isPlainObject(local) && isPlainObject(remote)) {
+            const result = {};
+            const baseObject = isPlainObject(base) ? base : {};
+            const keys = new Set([...Object.keys(baseObject), ...Object.keys(remote), ...Object.keys(local)]);
+            keys.forEach((key) => {
+                const localHas = Object.prototype.hasOwnProperty.call(local, key);
+                const remoteHas = Object.prototype.hasOwnProperty.call(remote, key);
+                const baseHas = Object.prototype.hasOwnProperty.call(baseObject, key);
+                if (!localHas && baseHas && sameValue(remote[key], baseObject[key])) return;
+                if (!remoteHas && baseHas && sameValue(local[key], baseObject[key])) return;
+                if (!localHas) { result[key] = clone(remote[key]); return; }
+                if (!remoteHas) { result[key] = clone(local[key]); return; }
+                result[key] = mergeStates(baseObject[key], local[key], remote[key]);
+            });
+            return result;
+        }
+
+        const arraysHaveIds = Array.isArray(local) && Array.isArray(remote) &&
+            [...local, ...remote].every((item) => isPlainObject(item) && item.id != null);
+        if (arraysHaveIds) {
+            const baseArray = Array.isArray(base) ? base : [];
+            const byId = (items) => new Map(items.map((item) => [String(item.id), item]));
+            const baseMap = byId(baseArray);
+            const localMap = byId(local);
+            const remoteMap = byId(remote);
+            const orderedIds = [...new Set([...remoteMap.keys(), ...localMap.keys(), ...baseMap.keys()])];
+            return orderedIds.flatMap((id) => {
+                const baseHas = baseMap.has(id), localHas = localMap.has(id), remoteHas = remoteMap.has(id);
+                if (!localHas && baseHas && sameValue(remoteMap.get(id), baseMap.get(id))) return [];
+                if (!remoteHas && baseHas && sameValue(localMap.get(id), baseMap.get(id))) return [];
+                if (!localHas) return [clone(remoteMap.get(id))];
+                if (!remoteHas) return [clone(localMap.get(id))];
+                return [mergeStates(baseMap.get(id), localMap.get(id), remoteMap.get(id))];
+            });
+        }
+
+        return clone(local);
     }
 
     function currentState() {
@@ -322,6 +376,7 @@
             writeMeta({ version: remoteVersion, pulledAt: new Date().toISOString() });
             localSave?.();
             lastLocalJson = JSON.stringify(currentState());
+            lastSyncedState = currentState();
         } finally {
             applyingRemoteDepth = Math.max(0, applyingRemoteDepth - 1);
         }
@@ -336,6 +391,7 @@
 
     async function pullRemote(options = {}) {
         if (!session || !profile?.active) return;
+        if (!options.force && (saving || pendingPush || saveTimer)) return;
         try {
             const row = await fetchRemoteRow();
             if (!row) {
@@ -355,7 +411,13 @@
     function queuePush() {
         if (applyingRemoteDepth > 0 || !session || !canEdit()) return;
         window.clearTimeout(saveTimer);
-        saveTimer = window.setTimeout(() => pushRemote(false), Number(cfg.syncDebounceMs) || 900);
+        pendingPush = true;
+        writeMeta({ pending: true });
+        renderStatus();
+        saveTimer = window.setTimeout(() => {
+            saveTimer = null;
+            pushRemote(false);
+        }, Number(cfg.syncDebounceMs) || 900);
     }
 
     function isNetworkFailure(error) {
@@ -397,22 +459,42 @@
         const payload = currentState();
         if (!payload) return;
         const json = JSON.stringify(payload);
-        if (!force && json === lastLocalJson) return;
+        if (!force && json === lastLocalJson) {
+            pendingPush = false;
+            writeMeta({ pending: false });
+            renderStatus();
+            return;
+        }
         saving = true;
         renderStatus();
         try {
-            const data = await saveRemoteState(payload);
+            let data = await saveRemoteState(payload);
+            let savedPayload = payload;
+            let savedJson = json;
             if (!data.saved) {
-                pendingPush = false;
-                saveFailureCount = 0;
-                writeMeta({ pending: false });
-                toast('Outra pessoa salvou antes de você. A versão da nuvem será carregada para evitar perda silenciosa.', 'warning', 10000);
                 const row = await fetchRemoteRow();
-                if (row) applyRemoteData(row.data, row.version);
-                return;
+                if (!row) throw new Error('A versão mais recente da nuvem não foi encontrada.');
+                localStorage.setItem(backupKey, JSON.stringify({ savedAt: new Date().toISOString(), version: remoteVersion, data: payload }));
+                const merged = mergeStates(lastSyncedState || {}, payload, row.data || {});
+                applyingRemoteDepth += 1;
+                try {
+                    state = { ...state, ...merged };
+                    window.BullNormalizeState?.();
+                    localSave?.();
+                } finally {
+                    applyingRemoteDepth = Math.max(0, applyingRemoteDepth - 1);
+                }
+                remoteVersion = Number(row.version) || Number(data.current_version) || remoteVersion;
+                lastSyncedState = clone(row.data || {});
+                savedPayload = currentState();
+                savedJson = JSON.stringify(savedPayload);
+                data = await saveRemoteState(savedPayload);
+                if (!data.saved) throw new Error('Houve novas alterações simultâneas. O sistema tentará enviar novamente.');
+                toast('Alterações de dois navegadores foram combinadas sem apagar a sua escala.', 'success', 8000);
             }
             remoteVersion = Number(data.new_version);
-            lastLocalJson = json;
+            lastLocalJson = savedJson;
+            lastSyncedState = clone(savedPayload);
             pendingPush = false;
             saveFailureCount = 0;
             window.clearTimeout(retryTimer);
@@ -478,6 +560,7 @@
         injectUi();
         hookLocalSave();
         lastLocalJson = JSON.stringify(currentState());
+        lastSyncedState = currentState();
         if (!configured) return;
         cloud.auth.onAuthStateChange((event, nextSession) => {
             if (event === 'INITIAL_SESSION') return;

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>pending</title></head>
+<body>
+<script>
+    localStorage.clear();
+    let state = { members: [{ id: 'm1', name: 'Piloto', points: 0 }], activities: [], finances: [], sales: [], schedule: {} };
+    window.saveState = function () {};
+    window.exportData = function () {};
+    window.BULL_CONFIG = { supabaseUrl: 'https://test.supabase.co', supabaseAnonKey: 'test-anon-key', teamSlug: 'bull-racing', syncDebounceMs: 120, remotePollMs: 20 };
+    const session = { access_token: 'token-1', user: { id: 'user-1', email: 'capitao@example.com' } };
+    let remoteVersion = 1;
+    let remoteData = JSON.parse(JSON.stringify(state));
+    let savedPayload = null;
+    const fakeClient = {
+        auth: {
+            onAuthStateChange() { return { data: { subscription: { unsubscribe() {} } } }; },
+            async getSession() { return { data: { session }, error: null }; }
+        },
+        from(table) {
+            return {
+                select() { return this; },
+                eq() { return this; },
+                async maybeSingle() {
+                    if (table === 'profiles') return { data: { id: 'user-1', role: 'admin', active: true }, error: null };
+                    return { data: { team_id: 'bull-racing', version: remoteVersion, data: JSON.parse(JSON.stringify(remoteData)) }, error: null };
+                }
+            };
+        },
+        rpc(name, payload) {
+            return { async single() {
+                if (payload.p_expected_version !== remoteVersion) return { data: { saved: false, current_version: remoteVersion }, error: null };
+                savedPayload = JSON.parse(JSON.stringify(payload.p_data));
+                remoteData = savedPayload;
+                remoteVersion += 1;
+                return { data: { saved: true, new_version: remoteVersion, current_version: remoteVersion }, error: null };
+            } };
+        }
+    };
+    window.supabase = { createClient() { return fakeClient; } };
+</script>
+<script src="../shared-sync.js"></script>
+<script>
+    window.addEventListener('load', function () {
+        setTimeout(function () {
+            state.schedule['Segunda_08:00 - 09:00'] = { members: ['m1'], product: 'Dindin', location: 'Box', notes: '', logged: false };
+            window.saveState();
+            remoteVersion = 2;
+            remoteData = { ...remoteData, activities: [{ id: 'remote-action', title: 'Outro navegador', memberIds: ['m1'], points: 1 }] };
+        }, 80);
+        setTimeout(function () {
+            const slot = state.schedule['Segunda_08:00 - 09:00'];
+            const remoteAction = state.activities.some(item => item.id === 'remote-action');
+            const ok = Boolean(slot) && remoteAction && savedPayload?.schedule?.['Segunda_08:00 - 09:00'] && savedPayload?.activities?.some(item => item.id === 'remote-action');
+            document.title = ok ? 'PENDING_PULL_TEST_PASS' : 'PENDING_PULL_TEST_FAIL';
+            document.body.dataset.result = ok ? 'pass' : 'fail';
+            document.body.dataset.details = JSON.stringify({ status: window.BullCloud.getStatus(), state, remoteVersion, savedPayload });
+        }, 700);
+    });
+</script>
+</body>
+</html>
