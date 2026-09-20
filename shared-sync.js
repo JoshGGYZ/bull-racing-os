@@ -1,0 +1,349 @@
+/* Bull Racing OS - autenticacao e sincronizacao compartilhada (Supabase) */
+(function () {
+    'use strict';
+
+    const cfg = window.BULL_CONFIG || {};
+    const teamId = cfg.teamSlug || 'bull-racing';
+    const metaKey = `bull_cloud_meta_${teamId}`;
+    const backupKey = `bull_cloud_pre_pull_backup_${teamId}`;
+    const configured = Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase?.createClient);
+    const cloud = configured
+        ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+            auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        })
+        : null;
+
+    let session = null;
+    let profile = null;
+    let remoteVersion = readMeta().version || 0;
+    let applyingRemote = false;
+    let saving = false;
+    let saveAgain = false;
+    let saveTimer = null;
+    let pollTimer = null;
+    let localSave = null;
+    let lastLocalJson = '';
+
+    function readMeta() {
+        try { return JSON.parse(localStorage.getItem(metaKey) || '{}'); }
+        catch (_) { return {}; }
+    }
+
+    function writeMeta(extra) {
+        const next = { ...readMeta(), ...extra, teamId, updatedAt: new Date().toISOString() };
+        localStorage.setItem(metaKey, JSON.stringify(next));
+    }
+
+    function clone(value) {
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    function currentState() {
+        try { return typeof state === 'object' && state ? clone(state) : null; }
+        catch (_) { return null; }
+    }
+
+    function hasMeaningfulLocalData(data) {
+        return Boolean(data && (
+            data.members?.length || data.activities?.length || data.finances?.length ||
+            data.sales?.length || Object.keys(data.schedule || {}).length
+        ));
+    }
+
+    function canEdit() {
+        return Boolean(profile?.active && ['admin', 'editor'].includes(profile.role));
+    }
+
+    function statusLabel() {
+        if (!configured) return ['Modo local', 'local'];
+        if (!session) return ['Entrar para sincronizar', 'offline'];
+        if (!profile?.active) return ['Acesso pendente', 'warning'];
+        if (saving) return ['Salvando…', 'syncing'];
+        return [`Nuvem · v${remoteVersion}`, 'online'];
+    }
+
+    function renderStatus() {
+        const el = document.getElementById('bull-cloud-status');
+        if (!el) return;
+        const [label, kind] = statusLabel();
+        el.dataset.kind = kind;
+        el.querySelector('[data-cloud-label]').textContent = label;
+        el.title = configured
+            ? (session ? `Conectado como ${session.user.email}` : 'Clique para entrar')
+            : 'Configure o Supabase em config.js';
+    }
+
+    function toast(message, kind = 'info', duration = 5000) {
+        let host = document.getElementById('bull-toast-host');
+        if (!host) {
+            host = document.createElement('div');
+            host.id = 'bull-toast-host';
+            host.className = 'bull-toast-host';
+            document.body.appendChild(host);
+        }
+        const item = document.createElement('div');
+        item.className = `bull-toast bull-toast-${kind}`;
+        item.textContent = message;
+        host.appendChild(item);
+        window.setTimeout(() => item.remove(), duration);
+    }
+
+    function injectUi() {
+        if (document.getElementById('bull-cloud-status')) return;
+        const style = document.createElement('style');
+        style.textContent = `
+            .bull-cloud-status{position:fixed;right:16px;bottom:16px;z-index:80;border:1px solid #d1d5db;background:#fff;color:#111827;border-radius:999px;padding:8px 12px;font:700 11px/1.2 Inter,system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.14);cursor:pointer;display:flex;align-items:center;gap:7px}
+            .bull-cloud-dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}.bull-cloud-status[data-kind="online"] .bull-cloud-dot{background:#16a34a}.bull-cloud-status[data-kind="syncing"] .bull-cloud-dot{background:#2563eb;animation:bullPulse 1s infinite}.bull-cloud-status[data-kind="warning"] .bull-cloud-dot{background:#f59e0b}.bull-cloud-status[data-kind="offline"] .bull-cloud-dot{background:#dc2626}
+            @keyframes bullPulse{50%{opacity:.3}}
+            .bull-cloud-backdrop{position:fixed;inset:0;z-index:100;background:rgba(17,24,39,.72);display:flex;align-items:center;justify-content:center;padding:18px}.bull-cloud-panel{width:min(460px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:14px;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+            .bull-cloud-panel input{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:7px;margin-top:5px}.bull-cloud-panel label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;color:#4b5563;margin-top:12px}.bull-cloud-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.bull-cloud-actions button{padding:9px 12px;border-radius:7px;font-size:11px;font-weight:800}.bull-primary{background:#111827;color:#fff}.bull-secondary{background:#f3f4f6;color:#111827;border:1px solid #d1d5db}.bull-danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.bull-cloud-help{font-size:11px;color:#6b7280;line-height:1.5;margin-top:12px}.bull-cloud-user{font-size:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-top:12px}.bull-toast-host{position:fixed;right:16px;bottom:62px;z-index:120;display:flex;flex-direction:column;gap:7px;width:min(360px,calc(100vw - 32px))}.bull-toast{background:#111827;color:#fff;padding:11px 13px;border-radius:8px;font:600 12px/1.4 Inter,system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.2)}.bull-toast-error{background:#991b1b}.bull-toast-success{background:#166534}.bull-toast-warning{background:#92400e}
+            @media print{.bull-cloud-status,.bull-cloud-backdrop,.bull-toast-host{display:none!important}}
+        `;
+        document.head.appendChild(style);
+
+        const button = document.createElement('button');
+        button.id = 'bull-cloud-status';
+        button.type = 'button';
+        button.className = 'bull-cloud-status no-print';
+        button.innerHTML = '<span class="bull-cloud-dot"></span><span data-cloud-label>Modo local</span>';
+        button.addEventListener('click', openCloudPanel);
+        document.body.appendChild(button);
+        renderStatus();
+    }
+
+    function closeCloudPanel() {
+        document.getElementById('bull-cloud-modal')?.remove();
+    }
+
+    function openCloudPanel() {
+        closeCloudPanel();
+        const modal = document.createElement('div');
+        modal.id = 'bull-cloud-modal';
+        modal.className = 'bull-cloud-backdrop no-print';
+        modal.addEventListener('click', (event) => { if (event.target === modal) closeCloudPanel(); });
+        const panel = document.createElement('div');
+        panel.className = 'bull-cloud-panel';
+
+        if (!configured) {
+            panel.innerHTML = `
+                <h2 class="text-xl font-black uppercase">Sincronização não configurada</h2>
+                <p class="bull-cloud-help">O sistema continua funcionando neste navegador. Para compartilhar os dados, preencha <b>supabaseUrl</b> e <b>supabaseAnonKey</b> no arquivo <b>config.js</b>.</p>
+                <div class="bull-cloud-actions"><button class="bull-secondary" data-close>Fechar</button></div>`;
+        } else if (!session) {
+            panel.innerHTML = `
+                <h2 class="text-xl font-black uppercase">Acesso da equipe</h2>
+                <p class="bull-cloud-help">Entre para carregar e salvar a base compartilhada da Bull Racing.</p>
+                <form id="bull-login-form">
+                    <label>E-mail<input id="bull-auth-email" type="email" autocomplete="email" required></label>
+                    <label>Senha<input id="bull-auth-password" type="password" minlength="6" autocomplete="current-password" required></label>
+                    <div class="bull-cloud-actions"><button class="bull-primary" type="submit">Entrar</button><button class="bull-secondary" type="button" data-signup>Criar primeiro acesso</button><button class="bull-secondary" type="button" data-close>Cancelar</button></div>
+                </form>
+                <p class="bull-cloud-help">Use “Criar primeiro acesso” somente para a conta inicial do capitão. Os demais usuários devem ser aprovados por um administrador.</p>`;
+        } else {
+            const role = profile?.role || 'pendente';
+            panel.innerHTML = `
+                <h2 class="text-xl font-black uppercase">Sincronização da equipe</h2>
+                <div class="bull-cloud-user"><b>${escapeHtml(session.user.email)}</b><br>Permissão: ${escapeHtml(role)} · versão remota ${remoteVersion}</div>
+                <p class="bull-cloud-help">A nuvem é a fonte principal. Alterações são enviadas automaticamente quando esta conta tem permissão de edição.</p>
+                <div class="bull-cloud-actions">
+                    <button class="bull-primary" type="button" data-pull>Baixar da nuvem</button>
+                    ${canEdit() ? '<button class="bull-secondary" type="button" data-push>Enviar este dispositivo</button>' : ''}
+                    <button class="bull-secondary" type="button" data-export>Exportar backup</button>
+                    <button class="bull-danger" type="button" data-logout>Sair</button>
+                    <button class="bull-secondary" type="button" data-close>Fechar</button>
+                </div>`;
+        }
+
+        modal.appendChild(panel);
+        document.body.appendChild(modal);
+        panel.querySelector('[data-close]')?.addEventListener('click', closeCloudPanel);
+        panel.querySelector('#bull-login-form')?.addEventListener('submit', login);
+        panel.querySelector('[data-signup]')?.addEventListener('click', signup);
+        panel.querySelector('[data-pull]')?.addEventListener('click', async () => { await pullRemote({ force: true }); closeCloudPanel(); });
+        panel.querySelector('[data-push]')?.addEventListener('click', async () => {
+            if (confirm('Enviar os dados deste navegador para a nuvem? A operação respeitará o controle de versão.')) await pushRemote(true);
+            closeCloudPanel();
+        });
+        panel.querySelector('[data-export]')?.addEventListener('click', () => window.exportData?.());
+        panel.querySelector('[data-logout]')?.addEventListener('click', logout);
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+    }
+
+    async function login(event) {
+        event.preventDefault();
+        const email = document.getElementById('bull-auth-email').value.trim();
+        const password = document.getElementById('bull-auth-password').value;
+        const { error } = await cloud.auth.signInWithPassword({ email, password });
+        if (error) return toast(`Não foi possível entrar: ${error.message}`, 'error', 8000);
+        closeCloudPanel();
+    }
+
+    async function signup() {
+        const email = document.getElementById('bull-auth-email').value.trim();
+        const password = document.getElementById('bull-auth-password').value;
+        if (!email || password.length < 6) return toast('Informe e-mail e senha com pelo menos 6 caracteres.', 'warning');
+        const { data, error } = await cloud.auth.signUp({ email, password });
+        if (error) return toast(`Não foi possível criar o acesso: ${error.message}`, 'error', 8000);
+        if (!data.session) toast('Conta criada. Confirme o e-mail antes de entrar.', 'success', 9000);
+        else toast('Conta criada e conectada.', 'success');
+        closeCloudPanel();
+    }
+
+    async function logout() {
+        await cloud.auth.signOut();
+        closeCloudPanel();
+        toast('Sessão encerrada. Os dados locais foram mantidos.');
+    }
+
+    async function loadProfile() {
+        profile = null;
+        if (!session) return;
+        const { data, error } = await cloud.from('profiles').select('id, display_name, role, active').eq('id', session.user.id).maybeSingle();
+        if (error) {
+            toast(`Erro ao consultar permissão: ${error.message}`, 'error', 8000);
+            return;
+        }
+        profile = data;
+        if (profile && !profile.active) toast('Sua conta aguarda aprovação de um administrador.', 'warning', 8000);
+    }
+
+    function applyRemoteData(data, version) {
+        if (!data || typeof data !== 'object') throw new Error('Estado remoto inválido');
+        const local = currentState();
+        if (hasMeaningfulLocalData(local) && JSON.stringify(local) !== JSON.stringify(data)) {
+            localStorage.setItem(backupKey, JSON.stringify({ savedAt: new Date().toISOString(), version: remoteVersion, data: local }));
+        }
+        applyingRemote = true;
+        try {
+            state = { ...state, ...clone(data) };
+            remoteVersion = Number(version) || 0;
+            writeMeta({ version: remoteVersion, pulledAt: new Date().toISOString() });
+            lastLocalJson = JSON.stringify(currentState());
+            localSave?.();
+        } finally {
+            applyingRemote = false;
+        }
+        renderStatus();
+    }
+
+    async function fetchRemoteRow() {
+        const { data, error } = await cloud.from('team_state').select('team_id, data, version, updated_at').eq('team_id', teamId).maybeSingle();
+        if (error) throw error;
+        return data;
+    }
+
+    async function pullRemote(options = {}) {
+        if (!session || !profile?.active) return;
+        try {
+            const row = await fetchRemoteRow();
+            if (!row) {
+                if (canEdit()) await pushRemote(true);
+                else toast('A base compartilhada ainda não foi criada pelo administrador.', 'warning');
+                return;
+            }
+            if (options.force || Number(row.version) > remoteVersion || JSON.stringify(row.data) !== lastLocalJson) {
+                applyRemoteData(row.data, row.version);
+                if (options.force) toast('Dados atualizados a partir da nuvem.', 'success');
+            }
+        } catch (error) {
+            toast(`Falha ao baixar dados: ${error.message}`, 'error', 8000);
+        }
+    }
+
+    function queuePush() {
+        if (applyingRemote || !session || !canEdit()) return;
+        window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(() => pushRemote(false), Number(cfg.syncDebounceMs) || 900);
+    }
+
+    async function pushRemote(force = false) {
+        if (!session || !canEdit()) return;
+        if (saving) { saveAgain = true; return; }
+        const payload = currentState();
+        if (!payload) return;
+        const json = JSON.stringify(payload);
+        if (!force && json === lastLocalJson) return;
+        saving = true;
+        renderStatus();
+        try {
+            const { data, error } = await cloud.rpc('save_team_state', {
+                p_team_id: teamId,
+                p_expected_version: remoteVersion,
+                p_data: payload
+            }).single();
+            if (error) throw error;
+            if (!data.saved) {
+                toast('Outra pessoa salvou antes de você. A versão da nuvem será carregada para evitar perda silenciosa.', 'warning', 10000);
+                const row = await fetchRemoteRow();
+                if (row) applyRemoteData(row.data, row.version);
+                return;
+            }
+            remoteVersion = Number(data.new_version);
+            lastLocalJson = json;
+            writeMeta({ version: remoteVersion, pushedAt: new Date().toISOString() });
+        } catch (error) {
+            toast(`Falha ao salvar na nuvem: ${error.message}. A cópia local continua preservada.`, 'error', 9000);
+        } finally {
+            saving = false;
+            renderStatus();
+            if (saveAgain) {
+                saveAgain = false;
+                queuePush();
+            }
+        }
+    }
+
+    async function handleSession(nextSession) {
+        session = nextSession;
+        profile = null;
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+        if (session) {
+            await loadProfile();
+            if (profile?.active) {
+                await pullRemote({ initial: true });
+                pollTimer = window.setInterval(() => pullRemote(), Number(cfg.remotePollMs) || 30000);
+            }
+        }
+        renderStatus();
+    }
+
+    function hookLocalSave() {
+        if (typeof window.saveState !== 'function' || localSave) return;
+        localSave = window.saveState;
+        window.saveState = function () {
+            localSave.apply(this, arguments);
+            if (!applyingRemote) queuePush();
+        };
+    }
+
+    async function start() {
+        injectUi();
+        hookLocalSave();
+        lastLocalJson = JSON.stringify(currentState());
+        if (!configured) return;
+        cloud.auth.onAuthStateChange((_event, nextSession) => {
+            window.setTimeout(() => handleSession(nextSession), 0);
+        });
+        const { data, error } = await cloud.auth.getSession();
+        if (error) toast(`Falha ao recuperar sessão: ${error.message}`, 'error');
+        await handleSession(data?.session || null);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && session && profile?.active) pullRemote();
+        });
+    }
+
+    window.BullCloud = Object.freeze({
+        isConfigured: () => configured,
+        getStatus: () => ({ configured, authenticated: Boolean(session), profile: profile ? { ...profile } : null, remoteVersion }),
+        pull: () => pullRemote({ force: true }),
+        push: () => pushRemote(true),
+        open: openCloudPanel
+    });
+
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start);
+})();

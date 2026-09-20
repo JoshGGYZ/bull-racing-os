@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>pending</title></head>
+<body>
+<script>
+    localStorage.clear();
+    let state = { members: [{ id: 'local', name: 'Local antigo', points: 0 }], activities: [], finances: [], sales: [], schedule: {} };
+    window.saveState = function () {};
+    window.exportData = function () {};
+    window.BULL_CONFIG = { supabaseUrl: 'https://test.supabase.co', supabaseAnonKey: 'test-anon-key', teamSlug: 'bull-racing', syncDebounceMs: 5, remotePollMs: 60000 };
+    const session = { user: { id: 'user-1', email: 'capitao@example.com' } };
+    let fetchCount = 0;
+    const fakeClient = {
+        auth: {
+            onAuthStateChange() { return { data: { subscription: { unsubscribe() {} } } }; },
+            async getSession() { return { data: { session }, error: null }; }
+        },
+        from(table) {
+            return {
+                select() { return this; },
+                eq() { return this; },
+                async maybeSingle() {
+                    if (table === 'profiles') return { data: { id: 'user-1', role: 'admin', active: true }, error: null };
+                    fetchCount += 1;
+                    const version = fetchCount === 1 ? 3 : 4;
+                    return { data: { team_id: 'bull-racing', version, data: { members: [{ id: 'remote', name: version === 3 ? 'Remoto inicial' : 'Remoto vencedor', points: version }], activities: [], finances: [], sales: [], schedule: {} } }, error: null };
+                }
+            };
+        },
+        rpc() {
+            return { async single() { return { data: { saved: false, new_version: 4, current_version: 4 }, error: null }; } };
+        }
+    };
+    window.supabase = { createClient() { return fakeClient; } };
+</script>
+<script src="../shared-sync.js"></script>
+<script>
+    window.addEventListener('load', function () {
+        setTimeout(function () {
+            state.members.push({ id: 'edit', name: 'Edição conflitante', points: 1 });
+            window.saveState();
+        }, 200);
+        setTimeout(function () {
+            const status = window.BullCloud.getStatus();
+            const backup = localStorage.getItem('bull_cloud_pre_pull_backup_bull-racing');
+            const ok = status.remoteVersion === 4 && state.members.length === 1 && state.members[0].name === 'Remoto vencedor' && Boolean(backup);
+            document.title = ok ? 'CONFLICT_TEST_PASS' : 'CONFLICT_TEST_FAIL';
+            document.body.dataset.result = ok ? 'pass' : 'fail';
+            document.body.dataset.details = JSON.stringify({ status, state, fetchCount, hasBackup: Boolean(backup) });
+        }, 650);
+    });
+</script>
+</body>
+</html>

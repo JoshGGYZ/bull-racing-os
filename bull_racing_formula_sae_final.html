@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -60,7 +62,7 @@
             <button onclick="switchTab('regulamento')" id="btn-regulamento" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
                 <i class="fa-solid fa-book w-6 text-bull-red"></i> Regulamento FSAE
             </button>
-            <button onclick="switchTab('competicao')" id="btn-competicao" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+            <button onclick="switchTab('competicao')" id="btn-competicao-fsae" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
                 <i class="fa-solid fa-flag-checkered w-6 text-gray-300"></i> Preparação (Doc)
             </button>
 
@@ -994,8 +996,8 @@
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-xs font-bold text-bull-dark uppercase">${ins.name}</td>
-                        <td class="px-4 py-3 text-[10px] font-mono font-bold text-bull-red">${ins.ruleRef}</td>
+                        <td class="px-4 py-3 text-xs font-bold text-bull-dark uppercase">${esc(ins.name)}</td>
+                        <td class="px-4 py-3 text-[10px] font-mono font-bold text-bull-red">${esc(ins.ruleRef)}</td>
                         <td class="px-4 py-3">
                             <select onchange="updateInspectionStatus(${idx}, this.value)" class="w-full p-1.5 rounded text-[10px] font-bold uppercase outline-none border cursor-pointer ${badgeClass}">
                                 <option value="Não verificado" ${ins.status === 'Não verificado' ? 'selected' : ''}>Não verificado</option>
@@ -1005,7 +1007,7 @@
                             </select>
                         </td>
                         <td class="px-4 py-3 text-[11px] text-gray-600 italic">
-                            <input type="text" value="${ins.notes}" onchange="updateInspectionNotes(${idx}, this.value)" placeholder="Anotação da equipe sobre este item..." class="w-full bg-transparent border-b border-gray-200 outline-none p-1 focus:border-bull-red transition">
+                            <input type="text" value="${esc(ins.notes)}" onchange="updateInspectionNotes(${idx}, this.value)" placeholder="Anotação da equipe sobre este item..." class="w-full bg-transparent border-b border-gray-200 outline-none p-1 focus:border-bull-red transition">
                         </td>
                     </tr>
                 `;
@@ -1022,7 +1024,7 @@
             for(const [key, rule] of Object.entries(state.generalRules)) {
                 let color = rule.pts > 0 ? 'bg-green-50' : 'bg-red-50';
                 cont.innerHTML += `<div class="flex justify-between items-center ${color} p-1.5 rounded border border-gray-200">
-                    <div class="flex flex-col flex-1"><span class="text-[10px] font-bold text-gray-800">${rule.name}</span><span class="text-[8px] text-gray-500 uppercase">${rule.group}</span></div>
+                    <div class="flex flex-col flex-1"><span class="text-[10px] font-bold text-gray-800">${esc(rule.name)}</span><span class="text-[8px] text-gray-500 uppercase">${esc(rule.group)}</span></div>
                     <input type="number" id="gen-rule-${key}" value="${rule.pts}" class="w-12 p-1 border rounded text-xs text-center font-mono mr-2">
                     <button type="button" onclick="deleteRule('${key}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash text-xs"></i></button>
                 </div>`;
@@ -1036,9 +1038,9 @@
 
         function populateActivitySelects() {
             const mem = document.getElementById('act-member'); mem.innerHTML = '<option value="">Piloto...</option>';
-            state.members.sort((a,b)=>a.name.localeCompare(b.name)).forEach(m => mem.innerHTML+=`<option value="${m.id}">${m.name}</option>`);
+            state.members.sort((a,b)=>a.name.localeCompare(b.name)).forEach(m => mem.innerHTML+=`<option value="${esc(m.id)}">${esc(m.name)}</option>`);
             const typ = document.getElementById('act-type'); typ.innerHTML = '<option value="">Ação...</option>';
-            for(const [key, rule] of Object.entries(state.generalRules)) typ.innerHTML+=`<option value="${key}">${rule.name} [${rule.pts>0?'+':''}${rule.pts}]</option>`;
+            for(const [key, rule] of Object.entries(state.generalRules)) typ.innerHTML+=`<option value="${esc(key)}">${esc(rule.name)} [${rule.pts>0?'+':''}${Number(rule.pts)||0}]</option>`;
         }
         
         function handleActivitySubmit(e) {
@@ -1056,7 +1058,7 @@
             const tbody = document.getElementById('activity-history-table'); tbody.innerHTML = '';
             state.activities.slice(0, 50).forEach(a => {
                 const names = a.memberIds.map(id => getMemberName(id).split(' ')[0]).join(', ');
-                tbody.innerHTML += `<tr><td class="px-2 py-2 text-[10px] text-gray-500">${a.date}</td><td class="px-2 py-2 text-xs font-bold leading-tight">${a.title}<br><span class="text-[9px] font-normal italic text-gray-400">${a.desc}</span></td><td class="px-2 py-2 text-[10px] font-medium">${names}</td><td class="px-2 py-2 text-center text-xs font-black ${a.points>0?'text-green-600':'text-red-600'}">${a.points>0?'+':''}${a.points}</td><td class="px-2 py-2 text-right no-print"><button onclick="deleteActivity('${a.id}')" class="text-red-400 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr><td class="px-2 py-2 text-[10px] text-gray-500">${esc(a.date)}</td><td class="px-2 py-2 text-xs font-bold leading-tight">${esc(a.title)}<br><span class="text-[9px] font-normal italic text-gray-400">${esc(a.desc)}</span></td><td class="px-2 py-2 text-[10px] font-medium">${esc(names)}</td><td class="px-2 py-2 text-center text-xs font-black ${a.points>0?'text-green-600':'text-red-600'}">${a.points>0?'+':''}${Number(a.points)||0}</td><td class="px-2 py-2 text-right no-print"><button onclick="deleteActivity('${a.id}')" class="text-red-400 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;
             });
         }
         function deleteActivity(id) {
@@ -1087,7 +1089,7 @@
                     if (slotData && slotData.members.length > 0) {
                         const names = slotData.members.map(id => getMemberName(id).split(' ')[0]).join(' & ');
                         bgClass = slotData.logged ? 'bg-green-50 cursor-not-allowed border-l-2 border-green-400' : 'bg-gray-100 hover:bg-gray-200 cursor-pointer border-l-2 border-bull-dark';
-                        content = `<div class="p-1 h-full flex flex-col justify-center"><div class="text-[9px] font-black text-bull-dark leading-tight uppercase">${names}</div><div class="mt-1 text-[8px] text-gray-500 font-bold uppercase tracking-wider">${slotData.product}</div></div>`;
+                        content = `<div class="p-1 h-full flex flex-col justify-center"><div class="text-[9px] font-black text-bull-dark leading-tight uppercase">${esc(names)}</div><div class="mt-1 text-[8px] text-gray-500 font-bold uppercase tracking-wider">${esc(slotData.product)}</div></div>`;
                     }
                     tr.innerHTML += `<td onclick="${slotData && slotData.logged ? '' : `openScheduleModal('${slotKey}')`}" class="border-r h-16 align-top p-0 ${bgClass}">${content}</td>`;
                 }); tbody.appendChild(tr);
@@ -1096,7 +1098,7 @@
         function openScheduleModal(slotKey) {
             document.getElementById('schedule-modal').classList.remove('hidden'); document.getElementById('modal-slot-id').value = slotKey;
             const slotData = state.schedule[slotKey];
-            let opts = '<option value="">Nenhum</option>'; state.members.forEach(m => opts+=`<option value="${m.id}">${m.name}</option>`);
+            let opts = '<option value="">Nenhum</option>'; state.members.forEach(m => opts+=`<option value="${esc(m.id)}">${esc(m.name)}</option>`);
             ['modal-member1','modal-member2'].forEach((id, i) => { const el = document.getElementById(id); el.innerHTML = opts; el.value = (slotData && slotData.members[i]) ? slotData.members[i] : ''; });
         }
         function saveScheduleSlot() {
@@ -1111,7 +1113,7 @@
 
         function populateSalesSelect() {
             const sel = document.getElementById('sale-shift-select'); sel.innerHTML = '<option value="">Turno Pendente...</option>';
-            for(let key in state.schedule) { const slot = state.schedule[key]; if(!slot.logged && slot.members.length>0) sel.innerHTML+=`<option value="${key}">${key.replace('_',' ')} - ${slot.product}</option>`; }
+            for(let key in state.schedule) { const slot = state.schedule[key]; if(!slot.logged && slot.members.length>0) sel.innerHTML+=`<option value="${esc(key)}">${esc(key.replace('_',' '))} - ${esc(slot.product)}</option>`; }
         }
         function handleSalesSubmit(e) {
             e.preventDefault(); const key = document.getElementById('sale-shift-select').value; const qty = parseInt(document.getElementById('sale-qty').value); const rev = parseFloat(document.getElementById('sale-revenue').value); const status = document.getElementById('sale-status').value;
@@ -1128,23 +1130,23 @@
 
         // Financeiro
         function handleFinanceSubmit(e) { e.preventDefault(); state.finances.unshift({ id: 'f_'+Date.now(), date: new Date().toLocaleDateString('pt-BR'), isoDate: new Date().toISOString(), type: document.getElementById('fin-type').value, category: document.getElementById('fin-cat').value, value: parseFloat(document.getElementById('fin-value').value) }); saveState(); e.target.reset(); }
-        function renderFinance() { const tb = document.getElementById('finance-table-body'); tb.innerHTML = ''; state.finances.forEach((f,i) => tb.innerHTML+=`<tr><td class="px-2 py-1">${f.date}</td><td class="px-2 py-1 font-bold">${f.category}</td><td class="px-2 py-1 text-right font-mono ${f.type==='entrada'?'text-green-600':'text-red-600'}">${f.type==='entrada'?'+':'-'} R$${f.value.toFixed(2)}</td><td class="px-2 py-1 text-center no-print"><button onclick="delObj('finances',${i})" class="text-red-400"><i class="fa-solid fa-trash"></i></button></td></tr>`); }
+        function renderFinance() { const tb = document.getElementById('finance-table-body'); tb.innerHTML = ''; state.finances.forEach((f,i) => tb.innerHTML+=`<tr><td class="px-2 py-1">${esc(f.date)}</td><td class="px-2 py-1 font-bold">${esc(f.category)}</td><td class="px-2 py-1 text-right font-mono ${f.type==='entrada'?'text-green-600':'text-red-600'}">${f.type==='entrada'?'+':'-'} R$${(Number(f.value)||0).toFixed(2)}</td><td class="px-2 py-1 text-center no-print"><button onclick="delObj('finances',${i})" class="text-red-400"><i class="fa-solid fa-trash"></i></button></td></tr>`); }
 
         // Patrocínios & Membros (Rápido)
-        function renderPatrocinios() { const g = document.getElementById('sponsors-grid'); g.innerHTML = ''; state.sponsors.forEach((s,i) => g.innerHTML+=`<div class="glass-card p-4 rounded border-t-2 border-green-500"><div><h4 class="font-black text-sm uppercase truncate">${s.name}</h4><span class="text-[9px] font-bold uppercase bg-gray-100 px-1 rounded">${s.status}</span></div><div class="mt-3 text-green-700 font-black">R$ ${s.value.toFixed(2)}</div><button onclick="delObj('sponsors',${i})" class="mt-2 text-[10px] text-red-500 no-print">Excluir</button></div>`); }
+        function renderPatrocinios() { const g = document.getElementById('sponsors-grid'); g.innerHTML = ''; state.sponsors.forEach((s,i) => g.innerHTML+=`<div class="glass-card p-4 rounded border-t-2 border-green-500"><div><h4 class="font-black text-sm uppercase truncate">${esc(s.name)}</h4><span class="text-[9px] font-bold uppercase bg-gray-100 px-1 rounded">${esc(s.status)}</span></div><div class="mt-3 text-green-700 font-black">R$ ${(Number(s.value)||0).toFixed(2)}</div><button onclick="delObj('sponsors',${i})" class="mt-2 text-[10px] text-red-500 no-print">Excluir</button></div>`); }
         function openSponsorModal() { document.getElementById('sponsor-modal').classList.remove('hidden'); }
         function saveSponsor(e) { e.preventDefault(); state.sponsors.push({ name: document.getElementById('sp-name').value, value: parseFloat(document.getElementById('sp-value').value), status: document.getElementById('sp-status').value }); e.target.reset(); saveState(); document.getElementById('sponsor-modal').classList.add('hidden'); }
 
         function renderMembers() {
             const tb = document.getElementById('members-table-body'); tb.innerHTML = '';
-            state.members.forEach(m => tb.innerHTML+=`<tr><td class="px-4 py-2 text-xs font-bold">${m.name}</td><td class="px-4 py-2 text-[10px] uppercase">${m.dept}</td><td class="px-4 py-2 text-xs">${m.phone||'-'}</td><td class="px-4 py-2 text-right no-print"><button onclick="openMemberModal('${m.id}')" class="text-blue-500 mr-2"><i class="fa-solid fa-pen"></i></button><button onclick="deleteMember('${m.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`);
+            state.members.forEach(m => tb.innerHTML+=`<tr><td class="px-4 py-2 text-xs font-bold">${esc(m.name)}</td><td class="px-4 py-2 text-[10px] uppercase">${esc(m.dept)}</td><td class="px-4 py-2 text-xs">${esc(m.phone||'-')}</td><td class="px-4 py-2 text-right no-print"><button onclick="openMemberModal('${m.id}')" class="text-blue-500 mr-2"><i class="fa-solid fa-pen"></i></button><button onclick="deleteMember('${m.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`);
             
             // Ranking
             const rtb = document.getElementById('ranking-table-body'); rtb.innerHTML = '';
             [...state.members].sort((a,b)=>b.points-a.points).forEach((m, i) => {
                 let msg = m.points>=50 ? `Parabéns ${m.name.split(' ')[0]}! Top do ranking!` : `Bora acelerar ${m.name.split(' ')[0]}! Precisamos de você!`;
                 let wapp = m.phone ? `https://wa.me/55${m.phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}` : '#';
-                rtb.innerHTML+=`<tr><td class="px-4 py-2 text-xs font-black text-gray-400">P${i+1}</td><td class="px-4 py-2 text-xs font-bold">${m.name}</td><td class="px-4 py-2 text-[10px] uppercase">${m.dept}</td><td class="px-4 py-2 text-sm font-black">${m.points}</td><td class="px-4 py-2 text-right no-print"><a href="${wapp}" target="_blank" class="text-green-500"><i class="fa-brands fa-whatsapp text-lg"></i></a></td></tr>`;
+                rtb.innerHTML+=`<tr><td class="px-4 py-2 text-xs font-black text-gray-400">P${i+1}</td><td class="px-4 py-2 text-xs font-bold">${esc(m.name)}</td><td class="px-4 py-2 text-[10px] uppercase">${esc(m.dept)}</td><td class="px-4 py-2 text-sm font-black">${Number(m.points)||0}</td><td class="px-4 py-2 text-right no-print"><a href="${wapp}" target="_blank" rel="noopener noreferrer" class="text-green-500"><i class="fa-brands fa-whatsapp text-lg"></i></a></td></tr>`;
             });
         }
         function openMemberModal(id=null) { document.getElementById('member-modal').classList.remove('hidden'); document.getElementById('member-id').value = id||''; if(id) { const m = state.members.find(x=>x.id===id); document.getElementById('member-name').value=m.name; document.getElementById('member-dept').value=m.dept; document.getElementById('member-phone').value=m.phone||''; document.getElementById('member-points').value=m.points; } else document.getElementById('member-form').reset(); }
@@ -2109,6 +2111,8 @@
     };
 })();
 </script>
+
+<script src="shared-sync.js"></script>
 
 </body>
 </html>

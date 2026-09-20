@@ -1,0 +1,41 @@
+name: Publicar Bull Racing OS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o projeto
+        uses: actions/checkout@v4
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v6
+      - name: Preparar arquivos estaticos
+        run: |
+          mkdir -p _site
+          cp index.html bull_racing_formula_sae_final.html config.js shared-sync.js _site/
+          touch _site/.nojekyll
+      - name: Enviar artefato
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v5
+

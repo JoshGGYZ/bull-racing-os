@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>pending</title></head>
+<body>
+<script>
+    const calls = [];
+    let state = { members: [{ id: 'm1', name: 'Teste', points: 0 }], activities: [], finances: [], sales: [], schedule: {} };
+    window.saveState = function () { calls.push('local-save'); };
+    window.exportData = function () {};
+    window.BULL_CONFIG = { supabaseUrl: 'https://test.supabase.co', supabaseAnonKey: 'test-anon-key', teamSlug: 'bull-racing', syncDebounceMs: 5, remotePollMs: 60000 };
+
+    const session = { user: { id: 'user-1', email: 'capitao@example.com' } };
+    const fakeClient = {
+        auth: {
+            onAuthStateChange() { return { data: { subscription: { unsubscribe() {} } } }; },
+            async getSession() { return { data: { session }, error: null }; },
+            async signOut() { return { error: null }; }
+        },
+        from(table) {
+            return {
+                select() { return this; },
+                eq() { return this; },
+                async maybeSingle() {
+                    if (table === 'profiles') return { data: { id: 'user-1', display_name: 'Capitão', role: 'admin', active: true }, error: null };
+                    if (table === 'team_state') return { data: null, error: null };
+                    return { data: null, error: null };
+                }
+            };
+        },
+        rpc(name, payload) {
+            calls.push({ name, payload });
+            return { async single() { return { data: { saved: true, new_version: 1, current_version: 1 }, error: null }; } };
+        }
+    };
+    window.supabase = { createClient() { return fakeClient; } };
+</script>
+<script src="../shared-sync.js"></script>
+<script>
+    window.addEventListener('load', function () {
+        setTimeout(function () {
+            const status = window.BullCloud.getStatus();
+            const rpc = calls.find(x => x && x.name === 'save_team_state');
+            const ok = status.configured && status.authenticated && status.profile?.role === 'admin' && status.remoteVersion === 1 && rpc?.payload?.p_data?.members?.[0]?.name === 'Teste';
+            document.title = ok ? 'SYNC_TEST_PASS' : 'SYNC_TEST_FAIL';
+            document.body.dataset.result = ok ? 'pass' : 'fail';
+            document.body.dataset.details = JSON.stringify({ status, calls });
+        }, 250);
+    });
+</script>
+</body>
+</html>
