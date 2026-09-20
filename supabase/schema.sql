@@ -102,10 +102,6 @@ for select to authenticated
 using (id = auth.uid() or public.current_profile_role() is not null);
 
 drop policy if exists profiles_admin_update on public.profiles;
-create policy profiles_admin_update on public.profiles
-for update to authenticated
-using (public.current_profile_role() = 'admin')
-with check (public.current_profile_role() = 'admin');
 
 drop policy if exists team_state_read_active on public.team_state;
 create policy team_state_read_active on public.team_state
@@ -187,12 +183,86 @@ begin
 end;
 $$;
 
+-- Administracao de acessos pelo proprio Bull Racing OS. Impede que o ultimo
+-- administrador ativo remova o proprio acesso por acidente.
+create or replace function public.admin_update_profile(
+    p_user_id uuid,
+    p_role text,
+    p_active boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+    v_target public.profiles%rowtype;
+    v_other_admins integer;
+begin
+    if public.current_profile_role() <> 'admin' then
+        raise exception 'Somente administradores podem alterar acessos' using errcode = '42501';
+    end if;
+    if p_role not in ('admin', 'editor', 'viewer') then
+        raise exception 'Papel invalido' using errcode = '22023';
+    end if;
+
+    select * into v_target from public.profiles where id = p_user_id for update;
+    if not found then
+        raise exception 'Perfil nao encontrado' using errcode = 'P0002';
+    end if;
+
+    if v_target.id = auth.uid() and (p_active = false or p_role <> 'admin') then
+        select count(*) into v_other_admins
+        from public.profiles
+        where id <> auth.uid() and active = true and role = 'admin';
+        if v_other_admins = 0 then
+            raise exception 'Crie outro administrador antes de remover seu proprio acesso de administrador' using errcode = '23514';
+        end if;
+    end if;
+
+    update public.profiles
+    set role = p_role, active = p_active
+    where id = p_user_id;
+end;
+$$;
+
+-- Restaura uma versao do historico como uma nova versao, sem apagar a trilha.
+create or replace function public.restore_team_state(
+    p_team_id text,
+    p_history_version bigint,
+    p_expected_version bigint
+)
+returns table(saved boolean, new_version bigint, current_version bigint)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+    v_data jsonb;
+begin
+    if public.current_profile_role() <> 'admin' then
+        raise exception 'Somente administradores podem restaurar versoes' using errcode = '42501';
+    end if;
+    select data into v_data
+    from public.team_state_history
+    where team_id = p_team_id and version = p_history_version;
+    if v_data is null then
+        raise exception 'Versao nao encontrada' using errcode = 'P0002';
+    end if;
+    return query select * from public.save_team_state(p_team_id, p_expected_version, v_data);
+end;
+$$;
+
 revoke all on function public.save_team_state(text, bigint, jsonb) from public, anon;
 grant execute on function public.save_team_state(text, bigint, jsonb) to authenticated;
+revoke all on function public.admin_update_profile(uuid, text, boolean) from public, anon;
+grant execute on function public.admin_update_profile(uuid, text, boolean) to authenticated;
+revoke all on function public.restore_team_state(text, bigint, bigint) from public, anon;
+grant execute on function public.restore_team_state(text, bigint, bigint) to authenticated;
 grant usage on schema public to authenticated;
 grant select on public.profiles, public.team_state to authenticated;
 grant select on public.team_state_history to authenticated;
+revoke insert, update, delete on public.profiles, public.team_state, public.team_state_history from authenticated, anon;
 
 comment on table public.team_state is 'Estado compartilhado atual do Bull Racing OS';
 comment on table public.team_state_history is 'Ultimas 100 versoes para auditoria e recuperacao';
-

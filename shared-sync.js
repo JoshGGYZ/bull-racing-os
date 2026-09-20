@@ -148,6 +148,7 @@
                 <div class="bull-cloud-actions">
                     <button class="bull-primary" type="button" data-pull>Baixar da nuvem</button>
                     ${canEdit() ? '<button class="bull-secondary" type="button" data-push>Enviar este dispositivo</button>' : ''}
+                    ${profile?.role === 'admin' ? '<button class="bull-secondary" type="button" data-users>Gerenciar acessos</button><button class="bull-secondary" type="button" data-history>Histórico de versões</button>' : ''}
                     <button class="bull-secondary" type="button" data-export>Exportar backup</button>
                     <button class="bull-danger" type="button" data-logout>Sair</button>
                     <button class="bull-secondary" type="button" data-close>Fechar</button>
@@ -165,7 +166,93 @@
             closeCloudPanel();
         });
         panel.querySelector('[data-export]')?.addEventListener('click', () => window.exportData?.());
+        panel.querySelector('[data-users]')?.addEventListener('click', openUsersPanel);
+        panel.querySelector('[data-history]')?.addEventListener('click', openHistoryPanel);
         panel.querySelector('[data-logout]')?.addEventListener('click', logout);
+    }
+
+    async function openUsersPanel() {
+        if (profile?.role !== 'admin') return;
+        const modal = document.getElementById('bull-cloud-modal');
+        const panel = modal?.querySelector('.bull-cloud-panel');
+        if (!panel) return;
+        panel.innerHTML = '<h2 class="text-xl font-black uppercase">Acessos da equipe</h2><p class="bull-cloud-help">Carregando usuários…</p>';
+        const { data, error } = await cloud.from('profiles').select('id, email, display_name, role, active, created_at').order('created_at', { ascending: true });
+        if (error) {
+            panel.innerHTML = `<h2 class="text-xl font-black uppercase">Acessos da equipe</h2><p class="bull-cloud-help">${escapeHtml(error.message)}</p><div class="bull-cloud-actions"><button class="bull-secondary" data-back>Voltar</button></div>`;
+            panel.querySelector('[data-back]').addEventListener('click', openCloudPanel);
+            return;
+        }
+        panel.innerHTML = `
+            <h2 class="text-xl font-black uppercase">Acessos da equipe</h2>
+            <p class="bull-cloud-help">Ative contas e escolha o que cada pessoa pode fazer. Administrador gerencia tudo; editor altera dados; leitor apenas consulta.</p>
+            <div data-user-list></div>
+            <div class="bull-cloud-actions"><button class="bull-secondary" data-back>Voltar</button></div>`;
+        const list = panel.querySelector('[data-user-list]');
+        (data || []).forEach((user) => {
+            const row = document.createElement('div');
+            row.className = 'bull-cloud-user';
+            row.innerHTML = `
+                <b>${escapeHtml(user.display_name || user.email || 'Usuário')}</b><br><span>${escapeHtml(user.email)}</span>
+                <label>Permissão<select data-role style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:7px;margin-top:5px"><option value="admin">Administrador</option><option value="editor">Editor</option><option value="viewer">Leitor</option></select></label>
+                <label style="display:flex;align-items:center;gap:7px"><input data-active type="checkbox" style="width:auto;margin:0"> Acesso ativo</label>
+                <div class="bull-cloud-actions"><button class="bull-primary" data-save-user>Salvar acesso</button></div>`;
+            row.querySelector('[data-role]').value = user.role;
+            row.querySelector('[data-active]').checked = Boolean(user.active);
+            row.querySelector('[data-save-user]').addEventListener('click', async () => {
+                const role = row.querySelector('[data-role]').value;
+                const active = row.querySelector('[data-active]').checked;
+                const { error: updateError } = await cloud.rpc('admin_update_profile', { p_user_id: user.id, p_role: role, p_active: active });
+                if (updateError) return toast(`Não foi possível alterar o acesso: ${updateError.message}`, 'error', 9000);
+                toast('Acesso atualizado.', 'success');
+                if (user.id === session.user.id) await loadProfile();
+            });
+            list.appendChild(row);
+        });
+        panel.querySelector('[data-back]').addEventListener('click', openCloudPanel);
+    }
+
+    async function openHistoryPanel() {
+        if (profile?.role !== 'admin') return;
+        const modal = document.getElementById('bull-cloud-modal');
+        const panel = modal?.querySelector('.bull-cloud-panel');
+        if (!panel) return;
+        panel.innerHTML = '<h2 class="text-xl font-black uppercase">Histórico de versões</h2><p class="bull-cloud-help">Carregando histórico…</p>';
+        const { data, error } = await cloud.from('team_state_history').select('version, saved_at, saved_by').eq('team_id', teamId).order('version', { ascending: false }).limit(25);
+        if (error) {
+            panel.innerHTML = `<h2 class="text-xl font-black uppercase">Histórico de versões</h2><p class="bull-cloud-help">${escapeHtml(error.message)}</p><div class="bull-cloud-actions"><button class="bull-secondary" data-back>Voltar</button></div>`;
+            panel.querySelector('[data-back]').addEventListener('click', openCloudPanel);
+            return;
+        }
+        panel.innerHTML = `
+            <h2 class="text-xl font-black uppercase">Histórico de versões</h2>
+            <p class="bull-cloud-help">Restaurar cria uma nova versão e mantém o histórico existente.</p>
+            <div data-history-list></div>
+            <div class="bull-cloud-actions"><button class="bull-secondary" data-back>Voltar</button></div>`;
+        const list = panel.querySelector('[data-history-list]');
+        (data || []).forEach((entry) => {
+            const row = document.createElement('div');
+            row.className = 'bull-cloud-user';
+            const when = new Date(entry.saved_at).toLocaleString('pt-BR');
+            row.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span><b>Versão ${Number(entry.version)}</b><br>${escapeHtml(when)}</span>${Number(entry.version) === remoteVersion ? '<span>Atual</span>' : '<button class="bull-secondary" data-restore>Restaurar</button>'}</div>`;
+            row.querySelector('[data-restore]')?.addEventListener('click', async () => {
+                if (!confirm(`Restaurar a versão ${entry.version}? O estado atual continuará no histórico.`)) return;
+                const { data: restored, error: restoreError } = await cloud.rpc('restore_team_state', {
+                    p_team_id: teamId,
+                    p_history_version: Number(entry.version),
+                    p_expected_version: remoteVersion
+                }).single();
+                if (restoreError) return toast(`Não foi possível restaurar: ${restoreError.message}`, 'error', 9000);
+                if (!restored.saved) return toast('A base mudou em outro computador. Atualize e tente novamente.', 'warning', 9000);
+                remoteVersion = Number(restored.new_version);
+                await pullRemote({ force: true });
+                toast(`Versão ${entry.version} restaurada com sucesso.`, 'success');
+                closeCloudPanel();
+            });
+            list.appendChild(row);
+        });
+        if (!data?.length) list.innerHTML = '<p class="bull-cloud-help">Ainda não há versões salvas.</p>';
+        panel.querySelector('[data-back]').addEventListener('click', openCloudPanel);
     }
 
     function escapeHtml(value) {

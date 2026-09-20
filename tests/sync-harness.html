@@ -24,6 +24,10 @@
                     if (table === 'profiles') return { data: { id: 'user-1', display_name: 'Capitão', role: 'admin', active: true }, error: null };
                     if (table === 'team_state') return { data: null, error: null };
                     return { data: null, error: null };
+                },
+                async order() {
+                    if (table === 'profiles') return { data: [{ id: 'user-2', email: 'membro@example.com', display_name: 'Membro', role: 'viewer', active: false, created_at: '2026-01-01' }], error: null };
+                    return { data: [], error: null };
                 }
             };
         },
@@ -38,13 +42,19 @@
 <script>
     window.addEventListener('load', function () {
         setTimeout(function () {
+            document.getElementById('bull-cloud-status').click();
+            document.querySelector('[data-users]').click();
+            setTimeout(function () { document.querySelector('[data-save-user]').click(); }, 50);
+        }, 250);
+        setTimeout(function () {
             const status = window.BullCloud.getStatus();
             const rpc = calls.find(x => x && x.name === 'save_team_state');
-            const ok = status.configured && status.authenticated && status.profile?.role === 'admin' && status.remoteVersion === 1 && rpc?.payload?.p_data?.members?.[0]?.name === 'Teste';
+            const adminRpc = calls.find(x => x && x.name === 'admin_update_profile');
+            const ok = status.configured && status.authenticated && status.profile?.role === 'admin' && status.remoteVersion === 1 && rpc?.payload?.p_data?.members?.[0]?.name === 'Teste' && adminRpc?.payload?.p_user_id === 'user-2';
             document.title = ok ? 'SYNC_TEST_PASS' : 'SYNC_TEST_FAIL';
             document.body.dataset.result = ok ? 'pass' : 'fail';
             document.body.dataset.details = JSON.stringify({ status, calls });
-        }, 250);
+        }, 650);
     });
 </script>
 </body>

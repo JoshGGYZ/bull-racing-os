@@ -12,6 +12,8 @@ controle de versão e histórico das últimas 100 alterações.
 - Com Supabase configurado, usuários autenticados carregam a base da equipe.
 - Administradores e editores salvam automaticamente.
 - Visualizadores apenas consultam.
+- Administradores aprovam usuários, alteram permissões e restauram versões pelo
+  próprio sistema, sem precisar editar tabelas no Supabase.
 - Uma gravação concorrente nunca sobrescreve silenciosamente a versão de outro
   computador: o sistema detecta conflito e recarrega a versão remota.
 
@@ -27,9 +29,9 @@ controle de versão e histórico das últimas 100 alterações.
 6. Depois do primeiro acesso, desative novos cadastros públicos no painel de
    autenticação. Crie ou convide as demais contas pelo painel.
 
-Contas posteriores entram como `viewer` inativo. Para aprovar uma conta, abra
-**Table Editor > profiles**, marque `active = true` e escolha `admin`, `editor`
-ou `viewer`.
+Contas posteriores entram como `viewer` inativo. Para aprovar uma conta, o
+administrador abre o indicador **Nuvem** no canto inferior direito e seleciona
+**Gerenciar acessos**.
 
 ## Publicação no GitHub Pages
 
@@ -45,4 +47,3 @@ Pages > Source** como **GitHub Actions**.
 - O banco mantém as últimas 100 versões em `team_state_history`.
 - Telefones e dados financeiros não devem ser publicados dentro do repositório;
   eles ficam no banco protegido pelas políticas de acesso.
-
