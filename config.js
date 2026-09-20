@@ -6,8 +6,8 @@
  * Preencha estes dois campos depois de criar o projeto no Supabase.
  */
 window.BULL_CONFIG = Object.freeze({
-    supabaseUrl: '',
-    supabaseAnonKey: '',
+    supabaseUrl: 'https://xpnvckkqatiikmrqxsez.supabase.co',
+    supabaseAnonKey: 'sb_publishable_sWA4NkqFk-KMEXOVRaxW4A_VdKj9Jmz',
     teamSlug: 'bull-racing',
     syncDebounceMs: 900,
     remotePollMs: 30000
