@@ -424,19 +424,22 @@
         </section>
 
         <section id="atividades" class="tab-content space-y-6">
-            <div class="border-b border-gray-300 pb-3"><h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Atividades & Presença</h2></div>
+            <div class="border-b border-gray-300 pb-3"><h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Atividades & Presença</h2><p class="text-gray-500 text-sm mt-1">Registre participação técnica, administrativa, eventos, entregas e ocorrências da equipe.</p></div>
+            <div id="activity-summary" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="glass-card p-5 rounded-xl lg:col-span-1 h-fit no-print">
                     <h3 class="text-sm font-bold mb-4 uppercase tracking-wider border-b pb-2">Lançar Ação / Presença</h3>
                     <form id="activity-form" onsubmit="handleActivitySubmit(event)" class="space-y-4">
-                        <div><label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Membro</label><select id="act-member" required class="w-full p-2 border rounded text-sm bg-gray-50"></select></div>
+                        <div><label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Integrante</label><select id="act-member" required class="w-full p-2 border rounded text-sm bg-gray-50"></select></div>
+                        <div><label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Data</label><input type="date" id="act-date" required class="w-full p-2 border rounded text-sm bg-gray-50"></div>
                         <div><label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tipo de Ação</label><select id="act-type" required class="w-full p-2 border rounded text-sm bg-gray-50"></select></div>
-                        <div><label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Detalhes</label><input type="text" id="act-desc" class="w-full p-2 border rounded text-sm bg-gray-50"></div>
+                        <div><label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Detalhes / resultado</label><textarea id="act-desc" rows="3" placeholder="O que foi feito, entrega realizada ou justificativa" class="w-full p-2 border rounded text-sm bg-gray-50"></textarea></div>
                         <button type="submit" class="w-full bg-bull-dark text-white p-2.5 rounded font-bold uppercase text-xs">Registrar</button>
+                        <button type="button" onclick="switchTab('membros')" class="w-full bg-gray-100 text-gray-700 p-2 rounded font-bold uppercase text-[10px]">Gerenciar integrantes</button>
                     </form>
                 </div>
                 <div class="glass-card p-5 rounded-xl lg:col-span-2 flex flex-col h-[500px]">
-                    <h3 class="text-sm font-bold mb-4 uppercase tracking-wider border-b pb-2">Histórico (Com exclusão recalculável)</h3>
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b pb-3 mb-3"><h3 class="text-sm font-bold uppercase tracking-wider">Histórico</h3><div class="flex gap-2 no-print"><select id="activity-filter-member" onchange="renderActivitiesEnhanced()" class="p-1.5 border rounded text-[10px]"></select><select id="activity-filter-group" onchange="renderActivitiesEnhanced()" class="p-1.5 border rounded text-[10px]"></select></div></div>
                     <div class="overflow-y-auto flex-1"><table class="min-w-full text-sm">
                         <thead class="bg-gray-50 sticky top-0"><tr><th class="px-2 py-2 text-left text-[10px] font-bold uppercase">Data</th><th class="px-2 py-2 text-left text-[10px] font-bold uppercase">Ação</th><th class="px-2 py-2 text-left text-[10px] font-bold uppercase">Membro</th><th class="px-2 py-2 text-center text-[10px] font-bold uppercase">Pts</th><th class="px-2 py-2 no-print"></th></tr></thead>
                         <tbody id="activity-history-table" class="divide-y divide-gray-100 bg-white"></tbody>
@@ -448,17 +451,19 @@
         <!-- Escala e Vendas mantêm sua glória -->
         <section id="escala" class="tab-content space-y-6">
             <div class="flex justify-between items-end border-b border-gray-300 pb-3">
-                <div><h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Escala de Vendas</h2></div>
+                <div><h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Escala de Vendas</h2><p class="text-gray-500 text-sm mt-1">Defina responsáveis, produto, ponto de venda e instruções de cada turno.</p></div>
                 <div class="flex space-x-2 no-print">
                     <button onclick="clearSchedule()" class="bg-red-50 text-red-600 px-3 py-1.5 rounded text-xs font-bold border">Limpar</button>
-                    <button onclick="autoFillSchedule()" class="bg-bull-dark text-white px-3 py-1.5 rounded text-xs font-bold">Auto-Completar</button>
+                    <button onclick="switchTab('config')" class="bg-bull-dark text-white px-3 py-1.5 rounded text-xs font-bold">Produtos e Pontuação</button>
                 </div>
             </div>
+            <div id="schedule-summary" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+            <div id="schedule-guidance" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"></div>
             <p class="text-xs font-bold text-blue-900 mt-1 uppercase" id="members-quota-warning"></p>
             <div class="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200">
                 <table class="min-w-full table-fixed border-collapse">
                     <thead class="bg-bull-dark text-white text-xs uppercase tracking-wider">
-                        <tr><th class="w-24 px-3 py-3 border-r">Horário</th><th class="px-3 py-3 border-r">Segunda</th><th class="px-3 py-3 border-r">Terça</th><th class="px-3 py-3 border-r">Quarta</th><th class="px-3 py-3 border-r">Quinta</th><th class="px-3 py-3">Sexta</th></tr>
+                        <tr><th class="w-24 px-3 py-3 border-r">Horário</th><th class="px-3 py-3 border-r">Segunda</th><th class="px-3 py-3 border-r">Terça</th><th class="px-3 py-3 border-r">Quarta</th><th class="px-3 py-3 border-r">Quinta</th><th class="px-3 py-3 border-r">Sexta</th><th class="px-3 py-3">Sábado</th></tr>
                     </thead>
                     <tbody id="schedule-grid" class="divide-y divide-gray-200"></tbody>
                 </table>
@@ -630,7 +635,7 @@
         <div class="bg-white rounded-xl p-5 w-96"><h3 class="text-lg font-black mb-4 uppercase">Patrocínio</h3><form onsubmit="saveSponsor(event)"><div class="space-y-3"><input type="text" id="sp-name" placeholder="Empresa" required class="w-full p-2 border rounded text-sm"><input type="number" step="0.01" id="sp-value" placeholder="Valor Estimado/Fechado R$" required class="w-full p-2 border rounded text-sm"><select id="sp-status" class="w-full p-2 border rounded text-sm"><option>Prospecção</option><option>Em Negociação</option><option>Fechado</option></select></div><div class="mt-5 flex justify-end space-x-2"><button type="button" onclick="document.getElementById('sponsor-modal').classList.add('hidden')" class="px-3 py-1 bg-gray-200 rounded text-xs font-bold">Cancelar</button><button type="submit" class="px-3 py-1 bg-green-600 text-white rounded text-xs font-bold">Salvar</button></div></form></div>
     </div>
     <div id="schedule-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 no-print">
-        <div class="bg-white rounded-xl p-5 w-96"><h3 class="text-lg font-black mb-4 uppercase" id="modal-slot-title">Box</h3><input type="hidden" id="modal-slot-id"><div class="space-y-3"><select id="modal-member1" class="w-full p-2 border rounded text-sm"></select><select id="modal-member2" class="w-full p-2 border rounded text-sm"></select><select id="modal-product" class="w-full p-2 border rounded text-sm"><option value="Dindin">Dindin</option><option value="Bebidas">Bebidas</option></select></div><div class="mt-5 flex justify-end space-x-2"><button onclick="document.getElementById('schedule-modal').classList.add('hidden')" class="px-3 py-1 bg-gray-200 rounded text-xs font-bold">Cancelar</button><button onclick="clearScheduleSlot()" class="px-3 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">Limpar</button><button onclick="saveScheduleSlot()" class="px-3 py-1 bg-bull-dark text-white rounded text-xs font-bold">Confirmar</button></div></div>
+        <div class="bg-white rounded-xl p-5 w-full max-w-md mx-4"><h3 class="text-lg font-black mb-1 uppercase" id="modal-slot-title">Configurar turno</h3><p class="text-xs text-gray-500 mb-4">Escolha ao menos um integrante para reservar o horário.</p><input type="hidden" id="modal-slot-id"><div class="space-y-3"><label class="block text-[10px] font-black uppercase text-gray-500">Responsável 1<select id="modal-member1" class="w-full mt-1 p-2 border rounded text-sm"></select></label><label class="block text-[10px] font-black uppercase text-gray-500">Responsável 2 (opcional)<select id="modal-member2" class="w-full mt-1 p-2 border rounded text-sm"></select></label><label class="block text-[10px] font-black uppercase text-gray-500">Produto / ação<select id="modal-product" class="w-full mt-1 p-2 border rounded text-sm"></select></label><label class="block text-[10px] font-black uppercase text-gray-500">Ponto / local<select id="modal-location" class="w-full mt-1 p-2 border rounded text-sm"><option>Box da equipe</option><option>Campus / corredor</option><option>Restaurante universitário</option><option>Evento externo</option><option>Online / encomendas</option><option>Outro</option></select></label><label class="block text-[10px] font-black uppercase text-gray-500">Observações<input id="modal-schedule-notes" maxlength="120" placeholder="Estoque, retirada, contato ou instruções" class="w-full mt-1 p-2 border rounded text-sm"></label></div><div class="mt-5 flex flex-wrap justify-end gap-2"><button onclick="document.getElementById('schedule-modal').classList.add('hidden')" class="px-3 py-2 bg-gray-200 rounded text-xs font-bold">Cancelar</button><button onclick="clearScheduleSlot()" class="px-3 py-2 bg-red-100 text-red-600 rounded text-xs font-bold">Limpar</button><button onclick="saveScheduleSlot()" class="px-3 py-2 bg-bull-dark text-white rounded text-xs font-bold">Salvar turno</button></div></div>
     </div>
 
     <!-- Modal: Regulamento (Regras e Anotações) -->
@@ -718,6 +723,22 @@
             { id: 'r8', number: '-', type: 'ANOTAÇÃO DA EQUIPE', title: 'Foco no Cost Addendum', category: 'Eventos Estáticos', source: 'Reunião Interna', content: 'Lembrar que o Cost Addendum deve ser enviado online até 24h ANTES do evento iniciar. Se esquecermos imagens de "antes e depois" tomaremos -10 pontos diretos (BR.3.6.1.3).' },
             { id: 'r9', number: '-', type: 'CHECKLIST INTERNO', title: 'Vestimentas para Trabalhar no Carro', category: 'Segurança', source: 'BR.4.2.3', content: '- Nos pits: Calça de algodão/jeans + sapato fechado.\n- Área de Rework: + Óculos de segurança.\n- Solda: + EPI de solda (máscara, avental, luvas).\n- PROIBIDO: Camisetas e tecidos sintéticos (nylon, poliéster).' }
         ];
+
+        const defaultActivityRules = {
+            reuniao_presenca: { name: 'Presença em reunião', pts: 5, group: 'Reuniões', description: 'Participação em reunião geral ou de diretoria.', active: true },
+            reuniao_lideranca: { name: 'Condução de reunião', pts: 8, group: 'Reuniões', description: 'Preparou pauta, conduziu e registrou encaminhamentos.', active: true },
+            oficina_turno: { name: 'Trabalho em oficina', pts: 8, group: 'Técnico', description: 'Participação produtiva em fabricação, montagem ou manutenção.', active: true },
+            entrega_tecnica: { name: 'Entrega técnica concluída', pts: 12, group: 'Técnico', description: 'Entregável técnico concluído e validado.', active: true },
+            teste_validacao: { name: 'Teste ou validação', pts: 10, group: 'Técnico', description: 'Preparação ou execução de teste do veículo.', active: true },
+            treinamento: { name: 'Treinamento / capacitação', pts: 6, group: 'Desenvolvimento', description: 'Participação em treinamento interno ou externo.', active: true },
+            organizacao: { name: 'Organização e segurança', pts: 4, group: 'Operação', description: '5S, inventário, documentação ou ação de segurança.', active: true },
+            evento_representacao: { name: 'Representação em evento', pts: 8, group: 'Eventos', description: 'Representou a equipe em evento ou apresentação.', active: true },
+            patrocinio_prospeccao: { name: 'Prospecção de patrocínio', pts: 7, group: 'Marketing', description: 'Contato ou avanço comprovado com possível parceiro.', active: true },
+            conteudo_divulgacao: { name: 'Conteúdo e divulgação', pts: 5, group: 'Marketing', description: 'Produção ou publicação de conteúdo da equipe.', active: true },
+            apoio_vendas: { name: 'Apoio em ação de vendas', pts: 5, group: 'Arrecadação', description: 'Preparação, logística ou suporte fora do turno pontuado.', active: true },
+            falta_injustificada: { name: 'Falta sem justificativa', pts: -5, group: 'Ocorrências', description: 'Ausência em compromisso previamente confirmado.', active: true },
+            atraso_pendencia: { name: 'Atraso de entrega', pts: -3, group: 'Ocorrências', description: 'Entrega atrasada sem alinhamento prévio.', active: true }
+        };
 
         // Estrutura Base (Gestão Útil)
         let state = {
@@ -1037,10 +1058,18 @@
         function saveGeneralRules(e) { e.preventDefault(); for(const key of Object.keys(state.generalRules)) { const inp = document.getElementById(`gen-rule-${key}`); if(inp) state.generalRules[key].pts = parseInt(inp.value); } saveState(); alert("Regras de Pontos Atualizadas."); }
 
         function populateActivitySelects() {
-            const mem = document.getElementById('act-member'); mem.innerHTML = '<option value="">Piloto...</option>';
-            state.members.sort((a,b)=>a.name.localeCompare(b.name)).forEach(m => mem.innerHTML+=`<option value="${esc(m.id)}">${esc(m.name)}</option>`);
-            const typ = document.getElementById('act-type'); typ.innerHTML = '<option value="">Ação...</option>';
-            for(const [key, rule] of Object.entries(state.generalRules)) typ.innerHTML+=`<option value="${esc(key)}">${esc(rule.name)} [${rule.pts>0?'+':''}${Number(rule.pts)||0}]</option>`;
+            const sortedMembers = [...state.members].sort((a,b)=>a.name.localeCompare(b.name));
+            const mem = document.getElementById('act-member');
+            if(mem) mem.innerHTML = '<option value="">Selecione um integrante...</option>' + sortedMembers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)} · ${esc(m.dept||'Sem diretoria')}</option>`).join('');
+            const date = document.getElementById('act-date'); if(date && !date.value) date.value = new Date().toISOString().slice(0,10);
+            const groups = {};
+            Object.entries(state.generalRules).filter(([,rule])=>rule.active!==false).forEach(([key,rule])=>{ const group=rule.group||'Geral'; (groups[group] ||= []).push([key,rule]); });
+            const typ = document.getElementById('act-type');
+            if(typ) typ.innerHTML = '<option value="">Selecione uma ação...</option>' + Object.entries(groups).sort(([a],[b])=>a.localeCompare(b)).map(([group,rules])=>`<optgroup label="${esc(group)}">${rules.sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([key,rule])=>`<option value="${esc(key)}">${esc(rule.name)} [${Number(rule.pts)>0?'+':''}${Number(rule.pts)||0}]</option>`).join('')}</optgroup>`).join('');
+            const mf = document.getElementById('activity-filter-member');
+            if(mf){ const current=mf.value; mf.innerHTML='<option value="">Todos os integrantes</option>'+sortedMembers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join(''); mf.value=current; }
+            const gf = document.getElementById('activity-filter-group');
+            if(gf){ const current=gf.value; gf.innerHTML='<option value="">Todos os grupos</option>'+Object.keys(groups).sort().map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join(''); gf.value=current; }
         }
         
         function handleActivitySubmit(e) {
@@ -1048,9 +1077,12 @@
             const mId = document.getElementById('act-member').value; const tId = document.getElementById('act-type').value;
             if(!mId || !tId) return;
             const rule = state.generalRules[tId]; const member = state.members.find(m => m.id === mId);
-            member.points += rule.pts;
-            state.activities.unshift({ id: 'act_'+Date.now(), source: 'geral', date: new Date().toLocaleDateString('pt-BR'), isoDate: new Date().toISOString(), memberIds: [mId], typeId: tId, title: rule.name, points: rule.pts, desc: document.getElementById('act-desc').value || 'Registro Manual' });
-            saveState(); e.target.reset();
+            if(!rule || !member) return alert('Selecione um integrante e uma ação válidos.');
+            const dateValue = document.getElementById('act-date').value || new Date().toISOString().slice(0,10);
+            const isoDate = new Date(dateValue+'T12:00:00').toISOString();
+            member.points = (Number(member.points)||0) + (Number(rule.pts)||0);
+            state.activities.unshift({ id: 'act_'+Date.now(), source: 'geral', date: new Date(dateValue+'T12:00:00').toLocaleDateString('pt-BR'), isoDate, memberIds: [mId], typeId: tId, title: rule.name, group: rule.group||'Geral', points: Number(rule.pts)||0, desc: document.getElementById('act-desc').value.trim() || 'Registro manual', archived:false });
+            saveState(); e.target.reset(); populateActivitySelects();
         }
 
         // Histórico com recálculo na exclusão (Garante que se errar, dá pra consertar)
@@ -1072,13 +1104,19 @@
         }
 
         // A lógica de Escala e Vendas é mantida enxuta e funcional (Legado V3)
-        const hours = ['10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00'];
-        const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+        const hours = ['08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00', '18:00 - 19:00', '19:00 - 20:00'];
+        const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
         function renderSchedule() {
             const tbody = document.getElementById('schedule-grid'); tbody.innerHTML = '';
             let counts = {}; state.members.forEach(m => counts[m.id] = 0);
-            for(let key in state.schedule) state.schedule[key].members.forEach(id => { if(counts[id]!==undefined) counts[id]++; });
+            for(let key in state.schedule) (state.schedule[key].members||[]).forEach(id => { if(counts[id]!==undefined) counts[id]++; });
+            const slots = Object.values(state.schedule||{}).filter(s=>(s.members||[]).length);
+            const scheduledMembers = new Set(slots.flatMap(s=>s.members||[]));
+            const summary = document.getElementById('schedule-summary');
+            if(summary) summary.innerHTML = [['Turnos preenchidos',slots.length],['Pendentes',slots.filter(s=>!s.logged).length],['Finalizados',slots.filter(s=>s.logged).length],['Integrantes escalados',scheduledMembers.size]].map(([label,value])=>`<div class="bg-white border rounded-xl p-3"><div class="text-[9px] font-black uppercase text-gray-500">${label}</div><div class="text-xl font-black mt-1">${value}</div></div>`).join('');
+            const guidance = document.getElementById('schedule-guidance');
+            if(guidance){ guidance.classList.toggle('hidden',state.members.length>0); guidance.innerHTML='<b>Nenhum integrante cadastrado.</b> Para montar a escala, cadastre primeiro o elenco em <button type="button" onclick="switchTab(\'membros\')" class="underline font-black">Roster (Membros)</button>.'; }
             
             hours.forEach(hour => {
                 let tr = document.createElement('tr'); tr.innerHTML = `<td class="px-1 py-3 border-r text-[9px] font-black text-gray-500 bg-gray-50 text-center uppercase tracking-tighter">${hour}</td>`;
@@ -1086,10 +1124,10 @@
                     const slotKey = `${day}_${hour}`; const slotData = state.schedule[slotKey];
                     let content = '<span class="text-gray-300 text-[8px] uppercase font-bold text-center block w-full mt-3"><i class="fa-solid fa-plus block mb-1 text-sm opacity-50"></i> Vazio</span>';
                     let bgClass = 'bg-white hover:bg-gray-50 cursor-pointer transition';
-                    if (slotData && slotData.members.length > 0) {
+                    if (slotData && (slotData.members||[]).length > 0) {
                         const names = slotData.members.map(id => getMemberName(id).split(' ')[0]).join(' & ');
                         bgClass = slotData.logged ? 'bg-green-50 cursor-not-allowed border-l-2 border-green-400' : 'bg-gray-100 hover:bg-gray-200 cursor-pointer border-l-2 border-bull-dark';
-                        content = `<div class="p-1 h-full flex flex-col justify-center"><div class="text-[9px] font-black text-bull-dark leading-tight uppercase">${esc(names)}</div><div class="mt-1 text-[8px] text-gray-500 font-bold uppercase tracking-wider">${esc(slotData.product)}</div></div>`;
+                        content = `<div class="p-1 h-full flex flex-col justify-center"><div class="text-[9px] font-black text-bull-dark leading-tight uppercase">${esc(names)}</div><div class="mt-1 text-[8px] text-gray-600 font-bold uppercase tracking-wider">${esc(slotData.product||'Produto não definido')}</div><div class="text-[8px] text-gray-400 truncate">${esc(slotData.location||'Local não definido')}${slotData.notes?' · '+esc(slotData.notes):''}</div></div>`;
                     }
                     tr.innerHTML += `<td onclick="${slotData && slotData.logged ? '' : `openScheduleModal('${slotKey}')`}" class="border-r h-16 align-top p-0 ${bgClass}">${content}</td>`;
                 }); tbody.appendChild(tr);
@@ -1098,13 +1136,22 @@
         function openScheduleModal(slotKey) {
             document.getElementById('schedule-modal').classList.remove('hidden'); document.getElementById('modal-slot-id').value = slotKey;
             const slotData = state.schedule[slotKey];
-            let opts = '<option value="">Nenhum</option>'; state.members.forEach(m => opts+=`<option value="${esc(m.id)}">${esc(m.name)}</option>`);
+            document.getElementById('modal-slot-title').innerText = slotKey.replace('_',' · ');
+            let opts = '<option value="">Nenhum</option>'; [...state.members].sort((a,b)=>a.name.localeCompare(b.name)).forEach(m => opts+=`<option value="${esc(m.id)}">${esc(m.name)} · ${esc(m.dept||'Sem diretoria')}</option>`);
             ['modal-member1','modal-member2'].forEach((id, i) => { const el = document.getElementById(id); el.innerHTML = opts; el.value = (slotData && slotData.members[i]) ? slotData.members[i] : ''; });
+            const product = document.getElementById('modal-product');
+            const activeProducts = (state.products||[]).filter(p=>p.active!==false&&!p.archived);
+            product.innerHTML = activeProducts.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.category?' · '+esc(p.category):''}</option>`).join('') || '<option value="Ação geral">Ação geral</option>';
+            if(slotData?.product && !activeProducts.some(p=>p.name===slotData.product)) product.innerHTML += `<option value="${esc(slotData.product)}">${esc(slotData.product)} · inativo</option>`;
+            product.value = slotData?.product || product.options[0]?.value || '';
+            document.getElementById('modal-location').value = slotData?.location || 'Box da equipe';
+            document.getElementById('modal-schedule-notes').value = slotData?.notes || '';
         }
         function saveScheduleSlot() {
             const key = document.getElementById('modal-slot-id').value; const m1 = document.getElementById('modal-member1').value; const m2 = document.getElementById('modal-member2').value;
             let mems = []; if(m1) mems.push(m1); if(m2 && m2!==m1) mems.push(m2);
-            if(mems.length===0) delete state.schedule[key]; else state.schedule[key] = { members: mems, product: document.getElementById('modal-product').value, logged: false };
+            if(mems.length===0) return alert('Escolha ao menos um integrante. Para remover um turno existente, use o botão “Limpar”.');
+            state.schedule[key] = { members: mems, product: document.getElementById('modal-product').value, location: document.getElementById('modal-location').value, notes: document.getElementById('modal-schedule-notes').value.trim(), logged: Boolean(state.schedule[key]?.logged) };
             saveState(); document.getElementById('schedule-modal').classList.add('hidden');
         }
         function clearScheduleSlot() { delete state.schedule[document.getElementById('modal-slot-id').value]; saveState(); document.getElementById('schedule-modal').classList.add('hidden'); }
@@ -1159,6 +1206,11 @@
 
         function esc(v) {
             return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+        }
+
+        function getMemberName(id) {
+            const member = (state.members || []).find(item => item.id === id);
+            return member?.name || 'Integrante removido';
         }
 
         function safeDate(iso) {
@@ -1239,6 +1291,11 @@
         }
 
         function seedDefaults() {
+            if(!state.generalRules || typeof state.generalRules !== 'object') state.generalRules = {};
+            Object.entries(defaultActivityRules).forEach(([key, rule]) => {
+                if(!state.generalRules[key]) state.generalRules[key] = { ...rule };
+                else state.generalRules[key] = { ...rule, ...state.generalRules[key] };
+            });
             if(!Array.isArray(state.milestones) || state.milestones.length===0) {
                 state.milestones = [
                     {id:'ms1',name:'Projeto detalhado',phase:'Projeto',date:'2026-09',status:'Em Andamento',critical:false},
@@ -2074,12 +2131,30 @@
     window.loadMoreActivities=function(){activityLimit+=50;renderActivitiesEnhanced();};
     function renderActivitiesEnhanced(){
         const tbody=document.getElementById('activity-history-table');if(!tbody)return;
-        const list=state.activities.filter(a=>!a.archived).slice(0,activityLimit);
-        tbody.innerHTML=list.map(a=>`<tr><td class="px-2 py-2">${esc2(a.date||'')}</td><td class="px-2 py-2">${esc2(a.title||a.typeId||'')}</td><td class="px-2 py-2">${esc2((a.memberIds||[]).map(getMemberName).join(', '))}</td><td class="px-2 py-2 text-center font-bold">${a.points||0}</td><td class="px-2 py-2 no-print whitespace-nowrap"><button onclick="archiveActivityById('${a.id}')" class="text-orange-600 mr-2">Arquivar</button><button onclick="deleteActivityById('${a.id}')" class="text-red-600">Excluir</button></td></tr>`).join('') || `<tr><td colspan="5" class="bull-enh-td text-gray-400">Nenhuma atividade.</td></tr>`;
-        if(list.length<state.activities.filter(a=>!a.archived).length)tbody.innerHTML+=`<tr><td colspan="5" class="text-center py-3 no-print"><button onclick="loadMoreActivities()" class="bull-btn bull-btn-light">Carregar mais</button></td></tr>`;
+        const memberFilter=document.getElementById('activity-filter-member')?.value||'';
+        const groupFilter=document.getElementById('activity-filter-group')?.value||'';
+        const active=state.activities.filter(a=>!a.archived);
+        const filtered=active.filter(a=>{
+            const group=a.group||state.generalRules?.[a.typeId]?.group||'Geral';
+            return (!memberFilter||(a.memberIds||[]).includes(memberFilter))&&(!groupFilter||group===groupFilter);
+        });
+        const list=filtered.slice(0,activityLimit);
+        tbody.innerHTML=list.map(a=>{const pts=Number(a.points)||0;return `<tr><td class="px-2 py-2 text-[10px] text-gray-500">${esc2(a.date||'')}</td><td class="px-2 py-2"><b class="text-xs">${esc2(a.title||a.typeId||'')}</b><div class="text-[9px] text-gray-400">${esc2(a.desc||a.group||'')}</div></td><td class="px-2 py-2 text-[10px]">${esc2((a.memberIds||[]).map(getMemberName).join(', '))}</td><td class="px-2 py-2 text-center font-black ${pts<0?'text-red-600':'text-green-600'}">${pts>0?'+':''}${pts}</td><td class="px-2 py-2 no-print whitespace-nowrap"><button onclick="archiveActivityById('${a.id}')" class="text-orange-600 mr-2">Arquivar</button><button onclick="deleteActivityById('${a.id}')" class="text-red-600">Excluir</button></td></tr>`}).join('') || `<tr><td colspan="5" class="bull-enh-td text-gray-400">Nenhuma atividade neste filtro.</td></tr>`;
+        if(list.length<filtered.length)tbody.innerHTML+=`<tr><td colspan="5" class="text-center py-3 no-print"><button onclick="loadMoreActivities()" class="bull-btn bull-btn-light">Carregar mais</button></td></tr>`;
+        const nowMonth=new Date().toISOString().slice(0,7);
+        const monthItems=active.filter(a=>monthKey(a.isoDate||a.date)===nowMonth);
+        const summary=document.getElementById('activity-summary');
+        if(summary)summary.innerHTML=[['Registros no mês',monthItems.length],['Pontos lançados',monthItems.reduce((s,a)=>s+(Number(a.points)||0)*(a.memberIds?.length||1),0)],['Participações',monthItems.reduce((s,a)=>s+(a.memberIds?.length||0),0)],['Tipos disponíveis',Object.values(state.generalRules||{}).filter(r=>r.active!==false).length]].map(([label,value])=>`<div class="bg-white border rounded-xl p-3"><div class="text-[9px] font-black uppercase text-gray-500">${label}</div><div class="text-xl font-black mt-1">${value}</div></div>`).join('');
     }
+    window.renderActivitiesEnhanced=renderActivitiesEnhanced;
     window.archiveActivityById=id=>{const i=state.activities.findIndex(a=>a.id===id);if(i>=0)archiveItem('activities',i);};
-    window.deleteActivityById=id=>{const i=state.activities.findIndex(a=>a.id===id);if(i>=0)safeDelete('activities',i);};
+    window.deleteActivityById=id=>{
+        const i=state.activities.findIndex(a=>a.id===id);if(i<0)return;
+        const activity=state.activities[i];
+        if(!confirm(`Excluir "${activity.title||'atividade'}"? Os pontos serão revertidos.`))return;
+        (activity.memberIds||[]).forEach(memberId=>{const member=state.members.find(m=>m.id===memberId);if(member)member.points=(Number(member.points)||0)-(Number(activity.points)||0);});
+        state.activities.splice(i,1);saveState();renderActivitiesEnhanced();
+    };
 
     // ---------- Render enhanced ----------
     function renderEnhancedAll(){
