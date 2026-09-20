@@ -136,9 +136,9 @@
                 <form id="bull-login-form">
                     <label>E-mail<input id="bull-auth-email" type="email" autocomplete="email" required></label>
                     <label>Senha<input id="bull-auth-password" type="password" minlength="6" autocomplete="current-password" required></label>
-                    <div class="bull-cloud-actions"><button class="bull-primary" type="submit">Entrar</button><button class="bull-secondary" type="button" data-signup>Criar primeiro acesso</button><button class="bull-secondary" type="button" data-close>Cancelar</button></div>
+                    <div class="bull-cloud-actions"><button class="bull-primary" type="submit">Entrar</button><button class="bull-secondary" type="button" data-signup>Criar acesso</button><button class="bull-secondary" type="button" data-close>Cancelar</button></div>
                 </form>
-                <p class="bull-cloud-help">Use “Criar primeiro acesso” somente para a conta inicial do capitão. Os demais usuários devem ser aprovados por um administrador.</p>`;
+                <p class="bull-cloud-help">A primeira conta recebe permissão de administrador. As demais ficam aguardando aprovação de um administrador.</p>`;
         } else {
             const role = profile?.role || 'pendente';
             panel.innerHTML = `
@@ -272,7 +272,12 @@
         const email = document.getElementById('bull-auth-email').value.trim();
         const password = document.getElementById('bull-auth-password').value;
         if (!email || password.length < 6) return toast('Informe e-mail e senha com pelo menos 6 caracteres.', 'warning');
-        const { data, error } = await cloud.auth.signUp({ email, password });
+        const emailRedirectTo = new URL('.', window.location.href).href;
+        const { data, error } = await cloud.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo }
+        });
         if (error) return toast(`Não foi possível criar o acesso: ${error.message}`, 'error', 8000);
         if (!data.session) toast('Conta criada. Confirme o e-mail antes de entrar.', 'success', 9000);
         else toast('Conta criada e conectada.', 'success');

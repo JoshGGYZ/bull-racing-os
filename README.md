@@ -24,10 +24,10 @@ controle de versão e histórico das últimas 100 alterações.
 3. Em **Project Settings > API**, copie a Project URL e a chave `anon` ou
    `publishable`. Nunca use a chave `service_role` no navegador.
 4. Preencha `supabaseUrl` e `supabaseAnonKey` em `config.js`.
-5. Abra o sistema, clique em **Entrar para sincronizar** e use **Criar primeiro
-   acesso**. A primeira conta criada recebe papel de administrador.
-6. Depois do primeiro acesso, desative novos cadastros públicos no painel de
-   autenticação. Crie ou convide as demais contas pelo painel.
+5. Abra o sistema, clique em **Entrar para sincronizar** e use **Criar acesso**.
+   A primeira conta criada recebe papel de administrador.
+6. Cada integrante pode usar **Criar acesso** com o próprio e-mail. Depois de
+   confirmar o e-mail, a conta fica inativa até ser aprovada no sistema.
 
 Contas posteriores entram como `viewer` inativo. Para aprovar uma conta, o
 administrador abre o indicador **Nuvem** no canto inferior direito e seleciona
