@@ -1519,6 +1519,7 @@
         state.archivePageSize = Number(state.archivePageSize)||20;
         state.archive = Array.isArray(state.archive) ? state.archive : [];
     }
+    window.BullNormalizeState=ensureState;
 
     function injectStyle(){
         if(document.getElementById('bull-enh-style')) return;
@@ -2192,7 +2193,7 @@
 })();
 </script>
 
-<script src="shared-sync.js?v=20260920-1"></script>
+<script src="shared-sync.js?v=20260920-2"></script>
 
 </body>
 </html>

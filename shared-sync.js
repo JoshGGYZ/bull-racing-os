@@ -16,13 +16,18 @@
     let session = null;
     let profile = null;
     let remoteVersion = readMeta().version || 0;
-    let applyingRemote = false;
+    let applyingRemoteDepth = 0;
     let saving = false;
     let saveAgain = false;
+    let pendingPush = false;
+    let saveFailureCount = 0;
     let saveTimer = null;
+    let retryTimer = null;
     let pollTimer = null;
     let localSave = null;
     let lastLocalJson = '';
+    let sessionQueue = Promise.resolve();
+    let handledSessionToken = null;
 
     function readMeta() {
         try { return JSON.parse(localStorage.getItem(metaKey) || '{}'); }
@@ -59,6 +64,7 @@
         if (!session) return ['Entrar para sincronizar', 'offline'];
         if (!profile?.active) return ['Acesso pendente', 'warning'];
         if (saving) return ['Salvando…', 'syncing'];
+        if (pendingPush) return ['Envio pendente', 'warning'];
         return [`Nuvem · v${remoteVersion}`, 'online'];
     }
 
@@ -144,7 +150,7 @@
             panel.innerHTML = `
                 <h2 class="text-xl font-black uppercase">Sincronização da equipe</h2>
                 <div class="bull-cloud-user"><b>${escapeHtml(session.user.email)}</b><br>Permissão: ${escapeHtml(role)} · versão remota ${remoteVersion}</div>
-                <p class="bull-cloud-help">A nuvem é a fonte principal. Alterações são enviadas automaticamente quando esta conta tem permissão de edição.</p>
+                <p class="bull-cloud-help">${pendingPush ? 'Há alterações deste navegador aguardando envio. Mantenha a página aberta e tente novamente.' : 'A nuvem é a fonte principal. Alterações são enviadas automaticamente quando esta conta tem permissão de edição.'}</p>
                 <div class="bull-cloud-actions">
                     <button class="bull-primary" type="button" data-pull>Baixar da nuvem</button>
                     ${canEdit() ? '<button class="bull-secondary" type="button" data-push>Enviar este dispositivo</button>' : ''}
@@ -308,15 +314,16 @@
         if (hasMeaningfulLocalData(local) && JSON.stringify(local) !== JSON.stringify(data)) {
             localStorage.setItem(backupKey, JSON.stringify({ savedAt: new Date().toISOString(), version: remoteVersion, data: local }));
         }
-        applyingRemote = true;
+        applyingRemoteDepth += 1;
         try {
             state = { ...state, ...clone(data) };
+            window.BullNormalizeState?.();
             remoteVersion = Number(version) || 0;
             writeMeta({ version: remoteVersion, pulledAt: new Date().toISOString() });
-            lastLocalJson = JSON.stringify(currentState());
             localSave?.();
+            lastLocalJson = JSON.stringify(currentState());
         } finally {
-            applyingRemote = false;
+            applyingRemoteDepth = Math.max(0, applyingRemoteDepth - 1);
         }
         renderStatus();
     }
@@ -346,9 +353,42 @@
     }
 
     function queuePush() {
-        if (applyingRemote || !session || !canEdit()) return;
+        if (applyingRemoteDepth > 0 || !session || !canEdit()) return;
         window.clearTimeout(saveTimer);
         saveTimer = window.setTimeout(() => pushRemote(false), Number(cfg.syncDebounceMs) || 900);
+    }
+
+    function isNetworkFailure(error) {
+        const message = String(error?.message || error || '');
+        return error instanceof TypeError || /network|fetch|load failed|connection|offline/i.test(message);
+    }
+
+    function scheduleRetry() {
+        window.clearTimeout(retryTimer);
+        const delay = Math.min(60000, 3000 * Math.max(1, 2 ** Math.min(saveFailureCount - 1, 4)));
+        retryTimer = window.setTimeout(() => {
+            if (session && canEdit() && navigator.onLine !== false) pushRemote(false);
+        }, delay);
+    }
+
+    async function saveRemoteState(payload) {
+        let lastError = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+                const { data, error } = await cloud.rpc('save_team_state', {
+                    p_team_id: teamId,
+                    p_expected_version: remoteVersion,
+                    p_data: payload
+                }).single();
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                lastError = error;
+                if (!isNetworkFailure(error) || attempt === 2) throw error;
+                await new Promise((resolve) => window.setTimeout(resolve, attempt === 0 ? 800 : 2000));
+            }
+        }
+        throw lastError;
     }
 
     async function pushRemote(force = false) {
@@ -361,13 +401,11 @@
         saving = true;
         renderStatus();
         try {
-            const { data, error } = await cloud.rpc('save_team_state', {
-                p_team_id: teamId,
-                p_expected_version: remoteVersion,
-                p_data: payload
-            }).single();
-            if (error) throw error;
+            const data = await saveRemoteState(payload);
             if (!data.saved) {
+                pendingPush = false;
+                saveFailureCount = 0;
+                writeMeta({ pending: false });
                 toast('Outra pessoa salvou antes de você. A versão da nuvem será carregada para evitar perda silenciosa.', 'warning', 10000);
                 const row = await fetchRemoteRow();
                 if (row) applyRemoteData(row.data, row.version);
@@ -375,9 +413,19 @@
             }
             remoteVersion = Number(data.new_version);
             lastLocalJson = json;
-            writeMeta({ version: remoteVersion, pushedAt: new Date().toISOString() });
+            pendingPush = false;
+            saveFailureCount = 0;
+            window.clearTimeout(retryTimer);
+            writeMeta({ version: remoteVersion, pushedAt: new Date().toISOString(), pending: false });
         } catch (error) {
-            toast(`Falha ao salvar na nuvem: ${error.message}. A cópia local continua preservada.`, 'error', 9000);
+            pendingPush = true;
+            saveFailureCount += 1;
+            writeMeta({ pending: true, saveErrorAt: new Date().toISOString() });
+            if (saveFailureCount === 1) {
+                const detail = isNetworkFailure(error) ? 'A conexão falhou e o sistema tentará novamente automaticamente.' : error.message;
+                toast(`Alteração preservada neste navegador. ${detail}`, 'warning', 10000);
+            }
+            scheduleRetry();
         } finally {
             saving = false;
             renderStatus();
@@ -389,6 +437,12 @@
     }
 
     async function handleSession(nextSession) {
+        const nextToken = nextSession?.access_token || null;
+        if (nextToken === handledSessionToken && ((nextSession && profile) || (!nextSession && !session))) {
+            session = nextSession;
+            renderStatus();
+            return;
+        }
         session = nextSession;
         profile = null;
         window.clearInterval(pollTimer);
@@ -400,7 +454,15 @@
                 pollTimer = window.setInterval(() => pullRemote(), Number(cfg.remotePollMs) || 30000);
             }
         }
+        handledSessionToken = nextToken;
         renderStatus();
+    }
+
+    function enqueueSession(nextSession) {
+        sessionQueue = sessionQueue.then(() => handleSession(nextSession)).catch((error) => {
+            toast(`Falha ao iniciar a sincronização: ${error.message}`, 'error', 9000);
+        });
+        return sessionQueue;
     }
 
     function hookLocalSave() {
@@ -408,7 +470,7 @@
         localSave = window.saveState;
         window.saveState = function () {
             localSave.apply(this, arguments);
-            if (!applyingRemote) queuePush();
+            if (applyingRemoteDepth === 0) queuePush();
         };
     }
 
@@ -417,20 +479,30 @@
         hookLocalSave();
         lastLocalJson = JSON.stringify(currentState());
         if (!configured) return;
-        cloud.auth.onAuthStateChange((_event, nextSession) => {
-            window.setTimeout(() => handleSession(nextSession), 0);
+        cloud.auth.onAuthStateChange((event, nextSession) => {
+            if (event === 'INITIAL_SESSION') return;
+            if (event === 'TOKEN_REFRESHED') {
+                session = nextSession;
+                renderStatus();
+                return;
+            }
+            window.setTimeout(() => enqueueSession(nextSession), 0);
         });
         const { data, error } = await cloud.auth.getSession();
         if (error) toast(`Falha ao recuperar sessão: ${error.message}`, 'error');
-        await handleSession(data?.session || null);
+        await enqueueSession(data?.session || null);
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && session && profile?.active) pullRemote();
+            if (!document.hidden && session && profile?.active) {
+                if (pendingPush) pushRemote(false);
+                else pullRemote();
+            }
         });
+        window.addEventListener('online', () => { if (pendingPush) pushRemote(false); });
     }
 
     window.BullCloud = Object.freeze({
         isConfigured: () => configured,
-        getStatus: () => ({ configured, authenticated: Boolean(session), profile: profile ? { ...profile } : null, remoteVersion }),
+        getStatus: () => ({ configured, authenticated: Boolean(session), profile: profile ? { ...profile } : null, remoteVersion, pendingPush, saving }),
         pull: () => pullRemote({ force: true }),
         push: () => pushRemote(true),
         open: openCloudPanel
