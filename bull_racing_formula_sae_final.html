@@ -1472,6 +1472,11 @@
     }
 
     function ensureState(){
+        if(!state.generalRules || typeof state.generalRules!=='object') state.generalRules={};
+        Object.entries(defaultActivityRules).forEach(([key,rule])=>{
+            if(!state.generalRules[key]) state.generalRules[key]={...rule};
+            else state.generalRules[key]={...rule,...state.generalRules[key]};
+        });
         state.products = Array.isArray(state.products) ? state.products : [];
         if(state.products.length===0){
             const existingTargets = state.targets || {};
