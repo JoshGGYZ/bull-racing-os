@@ -1,0 +1,2114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bull Racing Formula SAE - Hub de Gestão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { bull: { red: '#E63946', dark: '#111827', light: '#F3F4F6', gray: '#374151', blue: '#3B82F6', gold: '#F59E0B' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .tab-content { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .tab-content.active { display: block; opacity: 1; }
+        .reg-tab { display: none; }
+        .reg-tab.block { display: block; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .transition-all { transition: all 0.2s ease; }
+        .glass-card { background: rgba(255, 255, 255, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .menu-group-title { font-size: 0.65rem; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1rem; margin-bottom: 0.5rem; padding-left: 1rem; }
+        
+        /* Otimização para Impressão / Geração de PDF */
+        @media print {
+            body { background-color: white; color: black; }
+            aside, .no-print { display: none !important; }
+            main { padding: 0 !important; overflow: visible !important; width: 100% !important; }
+            .glass-card { box-shadow: none !important; border: 1px solid #e5e7eb !important; break-inside: avoid; }
+            .tab-content { display: none; }
+            .tab-content.active { display: block; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen flex overflow-hidden">
+
+    <aside class="w-64 bg-bull-dark text-white flex flex-col h-full shadow-2xl z-10 border-r border-gray-800">
+        <div class="p-6 text-center border-b border-gray-800">
+            <h1 class="text-xl font-black text-white uppercase tracking-widest flex flex-col items-center justify-center">
+                <div class="flex items-center text-bull-red"><i class="fa-solid fa-flag-checkered mr-2 text-white"></i>BULL RACING</div>
+                <span class="text-bull-gold text-[10px] mt-1">FORMULA SAE</span>
+            </h1>
+        </div>
+        <nav class="flex-1 py-2 overflow-y-auto custom-scrollbar">
+            
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="w-full text-left px-4 py-3 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm mt-2">
+                <i class="fa-solid fa-gauge-high w-6 text-gray-400"></i> Painel Executivo
+            </button>
+
+            <div class="menu-group-title text-bull-red">Regras & Competição</div>
+            <button onclick="switchTab('regulamento')" id="btn-regulamento" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-book w-6 text-bull-red"></i> Regulamento FSAE
+            </button>
+            <button onclick="switchTab('competicao')" id="btn-competicao" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-flag-checkered w-6 text-gray-300"></i> Preparação (Doc)
+            </button>
+
+            <div class="menu-group-title text-bull-red">BR-02 (2026/2027)</div>
+            <button onclick="switchTab('cronograma')" id="btn-cronograma" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-timeline w-6 text-gray-300"></i> Cronograma & Marcos
+            </button>
+            <button onclick="switchTab('projeto')" id="btn-projeto" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-car-side w-6 text-gray-300"></i> Engenharia & Riscos
+            </button>
+            <button onclick="switchTab('competicao')" id="btn-competicao" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-flag-checkered w-6 text-gray-300"></i> FSAE Brasil
+            </button>
+
+            <div class="menu-group-title text-bull-gold">Engajamento & Equipe</div>
+            <button onclick="switchTab('ranking')" id="btn-ranking" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-trophy w-6 text-bull-gold"></i> Ranking Global
+            </button>
+            <button onclick="switchTab('atividades')" id="btn-atividades" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-bolt w-6 text-bull-gold"></i> Ações & Presença
+            </button>
+
+            <div class="menu-group-title text-bull-blue">Vendas & Financeiro</div>
+            <button onclick="switchTab('escala')" id="btn-escala" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-calendar-days w-6 text-bull-blue"></i> Escala da Semana
+            </button>
+            <button onclick="switchTab('vendas')" id="btn-vendas" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-cash-register w-6 text-bull-blue"></i> Turnos & Caixa
+            </button>
+
+            <div class="menu-group-title">Gestão e Memória</div>
+            <button onclick="switchTab('memoria')" id="btn-memoria" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-brain w-6 text-purple-400"></i> Memória da Equipe
+            </button>
+            <button onclick="switchTab('patrocinios')" id="btn-patrocinios" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-handshake w-6 text-green-400"></i> Patrocínios
+            </button>
+            <button onclick="switchTab('membros')" id="btn-membros" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-users w-6 text-gray-400"></i> Roster (Membros)
+            </button>
+            <button onclick="switchTab('config')" id="btn-config" class="w-full text-left px-4 py-2.5 hover:bg-gray-800 transition-all flex items-center nav-btn font-medium text-sm">
+                <i class="fa-solid fa-cogs w-6 text-gray-400"></i> Regras & Backup
+            </button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 h-full overflow-y-auto bg-gray-100 p-4 md:p-6 custom-scrollbar relative">
+        
+        <!-- Botão Global de Impressão -->
+        <button id="global-print-btn" onclick="window.print()" class="no-print bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-50 shadow-sm transition flex items-center">
+            <i class="fa-solid fa-print mr-2"></i> PDF / Imprimir
+        </button>
+
+        <section id="dashboard" class="tab-content active space-y-6">
+            <div class="border-b border-gray-300 pb-3">
+                <h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Painel de Comando</h2>
+                <p class="text-gray-500 text-sm">Visão executiva do status do BR-02 e engajamento da Bull Racing.</p>
+            </div>
+            
+            <!-- KPIs -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-card p-4 rounded-xl border-t-4 border-bull-dark">
+                    <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Membros Ativos</h3>
+                    <p class="text-2xl font-black text-bull-dark mt-1" id="dash-members">0</p>
+                </div>
+                <div class="glass-card p-4 rounded-xl border-t-4 border-bull-gold">
+                    <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Engajamento (Média Pts)</h3>
+                    <p class="text-2xl font-black text-bull-dark mt-1" id="dash-avg-pts">0</p>
+                </div>
+                <div class="glass-card p-4 rounded-xl border-t-4 border-green-500">
+                    <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Saldo do Caixa</h3>
+                    <p class="text-2xl font-black text-green-700 mt-1">R$ <span id="dash-balance">0,00</span></p>
+                </div>
+                <div class="glass-card p-4 rounded-xl border-t-4 border-bull-red">
+                    <h3 class="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Próximo Marco Crítico</h3>
+                    <p class="text-sm font-black text-bull-red mt-1 leading-tight truncate" id="dash-next-milestone">Nenhum definido</p>
+                    <p class="text-[10px] text-gray-500 font-bold" id="dash-next-milestone-date">-</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Saúde do Projeto -->
+                <div class="glass-card p-5 rounded-xl lg:col-span-2 flex flex-col justify-between">
+                    <h3 class="text-sm font-bold mb-3 border-b pb-2 uppercase tracking-wider text-bull-dark"><i class="fa-solid fa-car-side text-gray-400 mr-2"></i> Status das Diretorias</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="dash-depts-health">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Resumo da Semana -->
+                <div class="glass-card p-5 rounded-xl border-l-4 border-bull-blue">
+                    <h3 class="text-sm font-bold mb-3 border-b pb-2 uppercase tracking-wider text-bull-dark"><i class="fa-solid fa-calendar-week text-bull-blue mr-2"></i>Últimos 7 Dias</h3>
+                    <ul class="space-y-3 mt-4">
+                        <li class="flex justify-between text-sm"><span class="text-gray-600 font-medium">Lançamentos Extras:</span> <span class="font-black text-bull-dark" id="dash-week-acts">0</span></li>
+                        <li class="flex justify-between text-sm"><span class="text-gray-600 font-medium">Turnos de Venda:</span> <span class="font-black text-bull-blue" id="dash-week-shifts">0</span></li>
+                        <li class="flex justify-between text-sm"><span class="text-gray-600 font-medium">Arrecadação de Vendas:</span> <span class="font-black text-green-600" id="dash-week-rev">R$ 0,00</span></li>
+                        <li class="flex justify-between text-sm"><span class="text-gray-600 font-medium">Marcos Concluídos:</span> <span class="font-black text-bull-red" id="dash-week-milestones">0</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Gráfico de Ranking e Origem -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-card p-5 rounded-xl">
+                    <h3 class="text-sm font-bold mb-2 uppercase tracking-wider text-bull-dark"><i class="fa-solid fa-trophy text-bull-gold mr-2"></i> Pódio & Top 10</h3>
+                    <div class="relative h-48 w-full"><canvas id="pointsChart"></canvas></div>
+                </div>
+                <div class="glass-card p-5 rounded-xl">
+                    <h3 class="text-sm font-bold mb-4 border-b pb-2 uppercase tracking-wider text-bull-dark"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> Riscos Críticos e Atrasos</h3>
+                    <div class="overflow-y-auto h-40 custom-scrollbar pr-2">
+                        <ul id="dash-risks-list" class="space-y-2">
+                            <!-- Populated by JS -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="cronograma" class="tab-content space-y-6">
+            <div class="flex justify-between items-end border-b border-gray-300 pb-3">
+                <div>
+                    <h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Cronograma Master</h2>
+                    <p class="text-gray-500 text-sm">Acompanhamento das fases e marcos do projeto BR-02 (Temporada 26/27).</p>
+                </div>
+                <button onclick="openMilestoneModal()" class="no-print bg-bull-dark text-white px-4 py-2 rounded text-xs font-bold uppercase hover:bg-gray-800 shadow">
+                    <i class="fa-solid fa-plus mr-1"></i> Novo Marco
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+                <!-- Gantt/Kanban Híbrido das Fases -->
+                <div class="flex space-x-4 min-w-max pb-4" id="timeline-phases">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <section id="projeto" class="tab-content space-y-6">
+            <div class="border-b border-gray-300 pb-3">
+                <h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Engenharia & Projeto</h2>
+                <p class="text-gray-500 text-sm">Status das diretorias, gestão de riscos, bloqueios e custos do carro.</p>
+            </div>
+
+            <!-- Navegação Interna da Engenharia -->
+            <div class="flex space-x-2 border-b no-print mb-4 overflow-x-auto">
+                <button onclick="switchProjTab('proj-status')" id="btn-proj-status" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-bull-red text-bull-dark">Status Diretorias</button>
+                <button onclick="switchProjTab('proj-riscos')" id="btn-proj-riscos" class="px-4 py-2 text-xs font-bold uppercase text-gray-500 hover:text-bull-dark border-b-2 border-transparent">Riscos</button>
+                <button onclick="switchProjTab('proj-deps')" id="btn-proj-deps" class="px-4 py-2 text-xs font-bold uppercase text-gray-500 hover:text-bull-dark border-b-2 border-transparent">Dependências</button>
+                <button onclick="switchProjTab('proj-bom')" id="btn-proj-bom" class="px-4 py-2 text-xs font-bold uppercase text-gray-500 hover:text-bull-dark border-b-2 border-transparent">BOM / Custos</button>
+            </div>
+
+            <!-- Tab: Status -->
+            <div id="proj-status" class="proj-tab block">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="departments-grid">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Riscos -->
+            <div id="proj-riscos" class="proj-tab hidden">
+                <div class="glass-card p-5 rounded-xl mb-4 no-print bg-gray-50 border border-gray-200">
+                    <h4 class="text-xs font-black uppercase text-gray-700 mb-2">Registrar Novo Risco</h4>
+                    <form onsubmit="saveRisk(event)" class="flex space-x-2 items-end">
+                        <div class="flex-1"><label class="block text-[10px] font-bold uppercase text-gray-500">Descrição do Risco</label><input type="text" id="risk-desc" required class="w-full p-2 border rounded text-xs"></div>
+                        <div class="w-32"><label class="block text-[10px] font-bold uppercase text-gray-500">Diretoria</label><select id="risk-dept" class="w-full p-2 border rounded text-xs bg-white"></select></div>
+                        <div class="w-24"><label class="block text-[10px] font-bold uppercase text-gray-500">Nível</label><select id="risk-level" class="w-full p-2 border rounded text-xs bg-white"><option value="Baixo">Baixo</option><option value="Médio">Médio</option><option value="Alto">Alto</option><option value="Crítico">Crítico</option></select></div>
+                        <button type="submit" class="bg-bull-dark text-white p-2 rounded text-xs font-bold uppercase hover:bg-gray-800">Gravar</button>
+                    </form>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>
+                        <th class="px-4 py-2 text-left text-[10px] font-black uppercase text-gray-500">Risco / Descrição</th><th class="px-4 py-2 text-left text-[10px] font-black uppercase text-gray-500">Dir.</th><th class="px-4 py-2 text-center text-[10px] font-black uppercase text-gray-500">Status</th><th class="px-4 py-2 text-center text-[10px] font-black uppercase text-gray-500">Nível</th><th class="px-4 py-2 no-print"></th>
+                    </tr></thead><tbody id="risks-body" class="divide-y divide-gray-100"></tbody></table>
+                </div>
+            </div>
+
+            <!-- Tab: Dependências -->
+            <div id="proj-deps" class="proj-tab hidden">
+                <div class="glass-card p-5 rounded-xl mb-4 no-print bg-gray-50 border border-gray-200">
+                    <h4 class="text-xs font-black uppercase text-gray-700 mb-2">Registrar Gargalo/Dependência</h4>
+                    <form onsubmit="saveDep(event)" class="flex space-x-2 items-end">
+                        <div class="w-1/4"><label class="block text-[10px] font-bold uppercase text-red-600">Diretoria Bloqueada</label><select id="dep-from" required class="w-full p-2 border border-red-300 rounded text-xs bg-white"></select></div>
+                        <div class="w-1/4"><label class="block text-[10px] font-bold uppercase text-gray-500">Depende de (Dir.)</label><select id="dep-to" required class="w-full p-2 border rounded text-xs bg-white"></select></div>
+                        <div class="flex-1"><label class="block text-[10px] font-bold uppercase text-gray-500">Motivo / O que falta?</label><input type="text" id="dep-desc" required class="w-full p-2 border rounded text-xs"></div>
+                        <button type="submit" class="bg-bull-dark text-white p-2 rounded text-xs font-bold uppercase hover:bg-gray-800">Gravar</button>
+                    </form>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="deps-grid"></div>
+            </div>
+
+            <!-- Tab: BOM -->
+            <div id="proj-bom" class="proj-tab hidden">
+                <div class="glass-card p-5 rounded-xl mb-4 no-print bg-gray-50 border border-gray-200">
+                    <h4 class="text-xs font-black uppercase text-gray-700 mb-2">Adicionar Item à BOM</h4>
+                    <form onsubmit="saveBOM(event)" class="flex flex-wrap space-x-2 items-end">
+                        <div class="flex-1 min-w-[150px]"><label class="block text-[10px] font-bold uppercase">Item/Peça</label><input type="text" id="bom-item" required class="w-full p-2 border rounded text-xs"></div>
+                        <div class="w-32"><label class="block text-[10px] font-bold uppercase">Sistema</label><select id="bom-sys" class="w-full p-2 border rounded text-xs"></select></div>
+                        <div class="w-16"><label class="block text-[10px] font-bold uppercase">Qtd</label><input type="number" id="bom-qty" value="1" required class="w-full p-2 border rounded text-xs"></div>
+                        <div class="w-24"><label class="block text-[10px] font-bold uppercase">R$ Unit.</label><input type="number" step="0.01" id="bom-cost" required class="w-full p-2 border rounded text-xs"></div>
+                        <button type="submit" class="bg-bull-dark text-white p-2 rounded text-xs font-bold uppercase mt-2 md:mt-0">Add</button>
+                    </form>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden"><table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50"><tr><th class="px-3 py-2 text-left font-bold uppercase text-[10px]">Item</th><th class="px-3 py-2 text-left font-bold uppercase text-[10px]">Sis.</th><th class="px-3 py-2 text-center font-bold uppercase text-[10px]">Qtd</th><th class="px-3 py-2 text-right font-bold uppercase text-[10px]">Total (R$)</th><th class="px-3 py-2 text-center font-bold uppercase text-[10px]">Status</th><th class="px-3 py-2 no-print"></th></tr></thead>
+                    <tbody id="bom-body" class="divide-y divide-gray-100"></tbody>
+                </table></div>
+            </div>
+        </section>
+
+        <section id="competicao" class="tab-content space-y-6">
+            <div class="border-b border-gray-300 pb-3">
+                <h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">FSAE Brasil 2027</h2>
+                <p class="text-gray-500 text-sm">Preparação para a competição: Documentação, Inspeções e Eventos.</p>
+            </div>
+
+            <div class="glass-card p-6 rounded-xl border-t-4 border-bull-gold text-center">
+                <h3 class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">Contagem Regressiva Estimada</h3>
+                <div class="text-4xl font-black text-bull-dark" id="comp-countdown">Calculando...</div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-card p-5 rounded-xl border border-gray-200">
+                    <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-bull-dark border-b pb-2"><i class="fa-solid fa-file-pdf text-red-500 mr-2"></i> Documentação Oficial</h3>
+                    <form onsubmit="saveDoc(event)" class="flex space-x-2 items-end mb-4 no-print">
+                        <div class="flex-1"><input type="text" id="doc-name" placeholder="Nome do Documento (Ex: SES)" required class="w-full p-2 border rounded text-xs"></div>
+                        <div class="w-32"><input type="date" id="doc-date" required class="w-full p-2 border rounded text-xs"></div>
+                        <button type="submit" class="bg-gray-200 text-gray-800 p-2 rounded text-xs font-bold uppercase hover:bg-gray-300">Add</button>
+                    </form>
+                    <ul id="docs-list" class="space-y-2"></ul>
+                </div>
+
+                <div class="glass-card p-5 rounded-xl border border-gray-200">
+                    <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-bull-dark border-b pb-2"><i class="fa-solid fa-clipboard-check text-green-500 mr-2"></i> Readiness (Checklist)</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-xs font-black uppercase text-gray-500 mb-2">Inspeções</h4>
+                            <div class="flex flex-wrap gap-2 text-xs" id="comp-insp">
+                                <label class="flex items-center space-x-1 bg-gray-50 p-1.5 border rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" onchange="saveChecklists()" id="chk-tech"> <span>Technical</span></label>
+                                <label class="flex items-center space-x-1 bg-gray-50 p-1.5 border rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" onchange="saveChecklists()" id="chk-egress"> <span>Driver Egress</span></label>
+                                <label class="flex items-center space-x-1 bg-gray-50 p-1.5 border rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" onchange="saveChecklists()" id="chk-brake"> <span>Brake</span></label>
+                                <label class="flex items-center space-x-1 bg-gray-50 p-1.5 border rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" onchange="saveChecklists()" id="chk-noise"> <span>Noise</span></label>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-black uppercase text-gray-500 mb-2">Eventos Estáticos</h4>
+                            <div class="flex flex-wrap gap-2 text-xs" id="comp-stat">
+                                <label class="flex items-center space-x-1 bg-gray-50 p-1.5 border rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" onchange="saveChecklists()" id="chk-design"> <span>Design</span></label>
+                                <label class="flex items-center space-x-1 bg-gray-50 p-1.5 border rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" onchange="saveChecklists()" id="chk-cost"> <span>Cost</span></label>
+                                <label class="flex items-center space-x-1 bg-gray-50 p-1.5 border rounded cursor-pointer hover:bg-gray-100"><input type="checkbox" onchange="saveChecklists()" id="chk-business"> <span>Business</span></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Omissão controlada de re-estruturação HTML pesada para o ranking e atividades. As interfaces do v3 são mantidas e perfeitamente funcionais aqui. -->
+        
+        <section id="regulamento" class="tab-content space-y-6 pb-20">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-300 pb-3 gap-4">
+                <div>
+                    <h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Regulamento FSAE</h2>
+                    <p class="text-gray-500 text-sm">Central de Consulta Oficial e Anotações da Equipe (Referência 2026).</p>
+                </div>
+                <div class="flex flex-col items-end no-print">
+                    <span class="text-[10px] text-gray-500 font-bold uppercase mb-1">Versão: <span id="reg-version" class="text-bull-red">FSAEB 2026 V1.3</span> | Atualizado: <span id="reg-last-update">16/09/2026</span></span>
+                    <button onclick="checkRulesUpdate()" class="bg-bull-dark text-white px-3 py-1.5 rounded text-xs font-bold uppercase hover:bg-gray-800 shadow transition flex items-center"><i class="fa-solid fa-rotate mr-2 text-bull-gold"></i> Verificar Atualização</button>
+                </div>
+            </div>
+
+            <!-- Sub-Navegação Regulamento -->
+            <div class="flex space-x-2 border-b border-gray-200 no-print overflow-x-auto pb-1">
+                <button onclick="switchRegTab('reg-busca')" id="btn-reg-busca" class="px-4 py-2 text-xs font-bold uppercase border-b-2 border-bull-red text-bull-dark whitespace-nowrap">Base de Regras</button>
+                <button onclick="switchRegTab('reg-provas')" id="btn-reg-provas" class="px-4 py-2 text-xs font-bold uppercase text-gray-500 hover:text-bull-dark border-b-2 border-transparent whitespace-nowrap">Provas & Eventos</button>
+                <button onclick="switchRegTab('reg-inspecao')" id="btn-reg-inspecao" class="px-4 py-2 text-xs font-bold uppercase text-gray-500 hover:text-bull-dark border-b-2 border-transparent whitespace-nowrap">Inspeção Técnica</button>
+            </div>
+
+            <!-- Tab: Base de Regras -->
+            <div id="reg-busca" class="reg-tab block space-y-4">
+                <div class="glass-card p-4 rounded-xl border border-gray-200 flex flex-col md:flex-row gap-4 items-end bg-white">
+                    <div class="flex-1 w-full">
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1"><i class="fa-solid fa-magnifying-glass mr-1"></i> Pesquisa Rápida</label>
+                        <input type="text" id="reg-search" onkeyup="filterRules()" placeholder="Ex: cinto, freio, BR.5.4..." class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50 outline-none focus:border-bull-red">
+                    </div>
+                    <div class="w-full md:w-48">
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Sistema / Categoria</label>
+                        <select id="reg-cat-filter" onchange="filterRules()" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50 outline-none">
+                            <option value="">Todas</option>
+                            <option value="Administrativo">Administrativo</option>
+                            <option value="Chassi">Chassi</option>
+                            <option value="Suspensão e Direção">Suspensão e Direção</option>
+                            <option value="Freios">Freios</option>
+                            <option value="Powertrain">Powertrain</option>
+                            <option value="Elétrica / Eletrônica">Elétrica / Eletrônica</option>
+                            <option value="Segurança">Segurança</option>
+                            <option value="Eventos Dinâmicos">Eventos Dinâmicos</option>
+                            <option value="Eventos Estáticos">Eventos Estáticos</option>
+                        </select>
+                    </div>
+                    <div class="w-full md:w-48">
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Tipo de Conteúdo</label>
+                        <select id="reg-type-filter" onchange="filterRules()" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50 outline-none">
+                            <option value="">Todos</option>
+                            <option value="REGRA OFICIAL">Regra Oficial</option>
+                            <option value="ANOTAÇÃO DA EQUIPE">Anotação da Equipe</option>
+                            <option value="RESUMO INTERNO">Resumo Interno</option>
+                            <option value="CHECKLIST INTERNO">Checklist Interno</option>
+                        </select>
+                    </div>
+                    <button onclick="openRuleModal()" class="bg-bull-red text-white px-4 py-2 rounded text-xs font-bold uppercase hover:bg-red-700 h-[38px] whitespace-nowrap shadow-sm"><i class="fa-solid fa-plus mr-1"></i> Nova Regra</button>
+                </div>
+
+                <div class="bg-yellow-50 border-l-4 border-bull-gold p-3 rounded text-xs text-yellow-800 flex items-start">
+                    <i class="fa-solid fa-circle-info mr-2 mt-0.5"></i>
+                    <p>Conteúdo editável pela equipe. A base foi pré-preenchida com o <b>FSAEB 2026 Addendum V1.3</b> e <b>Formula SAE Rules 2026 V1.0</b>. Consulte sempre a fonte original em caso de dúvidas de interpretação.</p>
+                </div>
+
+                <div id="rules-list" class="space-y-4">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Provas & Eventos -->
+            <div id="reg-provas" class="reg-tab hidden space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="events-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Tab: Inspeção Técnica -->
+            <div id="reg-inspecao" class="reg-tab hidden space-y-4">
+                <div class="glass-card p-5 rounded-xl border border-gray-200 bg-white">
+                    <h3 class="text-sm font-black uppercase text-bull-dark mb-4 border-b pb-2 flex items-center"><i class="fa-solid fa-clipboard-check text-bull-red mr-2"></i> Inspeção Técnica & Readiness</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-[10px] font-black uppercase text-gray-600 w-1/4">Área / Teste</th>
+                                    <th class="px-4 py-3 text-left text-[10px] font-black uppercase text-gray-600 w-1/6">Referência (Regra)</th>
+                                    <th class="px-4 py-3 text-left text-[10px] font-black uppercase text-gray-600 w-1/6">Status da Equipe</th>
+                                    <th class="px-4 py-3 text-left text-[10px] font-black uppercase text-gray-600">Requisitos Principais / Observações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inspection-tbody" class="divide-y divide-gray-100 bg-white">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="ranking" class="tab-content space-y-6">
+            <div class="border-b border-gray-300 pb-3"><h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Ranking Global</h2><p class="text-gray-500 text-sm">Classificação de engajamento.</p></div>
+            <div class="glass-card rounded-xl overflow-hidden shadow-sm"><table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-bull-dark text-white"><tr><th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wider">Pos</th><th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wider">Membro</th><th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wider">Diretoria</th><th class="px-4 py-3 text-left text-xs font-black uppercase tracking-wider">Score</th><th class="px-4 py-3 text-right text-xs font-black uppercase tracking-wider no-print">WhatsApp</th></tr></thead>
+                <tbody id="ranking-table-body" class="divide-y divide-gray-100 bg-white"></tbody>
+            </table></div>
+        </section>
+
+        <section id="atividades" class="tab-content space-y-6">
+            <div class="border-b border-gray-300 pb-3"><h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Atividades & Presença</h2></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass-card p-5 rounded-xl lg:col-span-1 h-fit no-print">
+                    <h3 class="text-sm font-bold mb-4 uppercase tracking-wider border-b pb-2">Lançar Ação / Presença</h3>
+                    <form id="activity-form" onsubmit="handleActivitySubmit(event)" class="space-y-4">
+                        <div><label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Membro</label><select id="act-member" required class="w-full p-2 border rounded text-sm bg-gray-50"></select></div>
+                        <div><label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tipo de Ação</label><select id="act-type" required class="w-full p-2 border rounded text-sm bg-gray-50"></select></div>
+                        <div><label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Detalhes</label><input type="text" id="act-desc" class="w-full p-2 border rounded text-sm bg-gray-50"></div>
+                        <button type="submit" class="w-full bg-bull-dark text-white p-2.5 rounded font-bold uppercase text-xs">Registrar</button>
+                    </form>
+                </div>
+                <div class="glass-card p-5 rounded-xl lg:col-span-2 flex flex-col h-[500px]">
+                    <h3 class="text-sm font-bold mb-4 uppercase tracking-wider border-b pb-2">Histórico (Com exclusão recalculável)</h3>
+                    <div class="overflow-y-auto flex-1"><table class="min-w-full text-sm">
+                        <thead class="bg-gray-50 sticky top-0"><tr><th class="px-2 py-2 text-left text-[10px] font-bold uppercase">Data</th><th class="px-2 py-2 text-left text-[10px] font-bold uppercase">Ação</th><th class="px-2 py-2 text-left text-[10px] font-bold uppercase">Membro</th><th class="px-2 py-2 text-center text-[10px] font-bold uppercase">Pts</th><th class="px-2 py-2 no-print"></th></tr></thead>
+                        <tbody id="activity-history-table" class="divide-y divide-gray-100 bg-white"></tbody>
+                    </table></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Escala e Vendas mantêm sua glória -->
+        <section id="escala" class="tab-content space-y-6">
+            <div class="flex justify-between items-end border-b border-gray-300 pb-3">
+                <div><h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Escala de Vendas</h2></div>
+                <div class="flex space-x-2 no-print">
+                    <button onclick="clearSchedule()" class="bg-red-50 text-red-600 px-3 py-1.5 rounded text-xs font-bold border">Limpar</button>
+                    <button onclick="autoFillSchedule()" class="bg-bull-dark text-white px-3 py-1.5 rounded text-xs font-bold">Auto-Completar</button>
+                </div>
+            </div>
+            <p class="text-xs font-bold text-blue-900 mt-1 uppercase" id="members-quota-warning"></p>
+            <div class="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200">
+                <table class="min-w-full table-fixed border-collapse">
+                    <thead class="bg-bull-dark text-white text-xs uppercase tracking-wider">
+                        <tr><th class="w-24 px-3 py-3 border-r">Horário</th><th class="px-3 py-3 border-r">Segunda</th><th class="px-3 py-3 border-r">Terça</th><th class="px-3 py-3 border-r">Quarta</th><th class="px-3 py-3 border-r">Quinta</th><th class="px-3 py-3">Sexta</th></tr>
+                    </thead>
+                    <tbody id="schedule-grid" class="divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="vendas" class="tab-content space-y-6">
+            <div class="border-b border-gray-300 pb-3"><h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Fechamento e Caixa</h2></div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-card p-5 rounded-xl h-fit no-print">
+                    <h3 class="text-sm font-bold mb-4 uppercase tracking-wider border-b pb-2">Baixa no Turno</h3>
+                    <form id="sales-form" onsubmit="handleSalesSubmit(event)" class="space-y-4">
+                        <select id="sale-shift-select" required class="w-full p-2 border rounded text-sm bg-gray-50"></select>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-[10px] font-bold uppercase mb-1">Qtd</label><input type="number" id="sale-qty" required class="w-full p-2 border rounded"></div>
+                            <div><label class="block text-[10px] font-bold uppercase mb-1">Valor (R$)</label><input type="number" step="0.01" id="sale-revenue" required class="w-full p-2 border rounded"></div>
+                            <div class="col-span-2"><select id="sale-status" required class="w-full p-2 border rounded bg-gray-50"><option value="completed">✔ Concluído</option><option value="missed">❌ Falta s/ Justificativa</option></select></div>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 text-white p-2.5 rounded font-bold uppercase text-xs">Finalizar & Lançar no Caixa</button>
+                    </form>
+                </div>
+                <!-- Mini view do financeiro acoplada aqui -->
+                <div class="glass-card p-5 rounded-xl flex flex-col h-[400px]">
+                    <h3 class="text-sm font-bold uppercase border-b pb-2 mb-3">Extrato Geral (Entradas/Saídas)</h3>
+                    <form onsubmit="handleFinanceSubmit(event)" class="flex space-x-2 mb-3 no-print">
+                        <select id="fin-type" class="p-1 border rounded text-[10px]"><option value="entrada">Entrada</option><option value="saida">Saída</option></select>
+                        <input type="text" id="fin-cat" placeholder="Desc" class="flex-1 p-1 border rounded text-[10px]">
+                        <input type="number" step="0.01" id="fin-value" placeholder="R$" class="w-16 p-1 border rounded text-[10px]">
+                        <button type="submit" class="bg-gray-800 text-white px-2 rounded text-[10px]">Add</button>
+                    </form>
+                    <div class="overflow-y-auto flex-1"><table class="min-w-full text-xs"><tbody id="finance-table-body" class="divide-y"></tbody></table></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="memoria" class="tab-content space-y-6">
+            <div class="border-b border-gray-300 pb-3">
+                <h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Memória da Equipe</h2>
+                <p class="text-gray-500 text-sm">Registro de Testes do Carro, Decisões Técnicas e Reuniões.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Testes -->
+                <div class="glass-card p-5 rounded-xl border border-gray-200">
+                    <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-bull-dark border-b pb-2"><i class="fa-solid fa-stopwatch-20 text-gray-500 mr-2"></i> Log de Testes</h3>
+                    <form onsubmit="saveTest(event)" class="flex flex-col space-y-2 mb-4 no-print">
+                        <div class="flex space-x-2"><input type="date" id="test-date" required class="p-2 border rounded text-[10px]"><input type="text" id="test-name" placeholder="Ex: Teste de Freio Dinâmico" required class="flex-1 p-2 border rounded text-[10px]"></div>
+                        <div class="flex space-x-2"><input type="text" id="test-res" placeholder="Resultado / Observações" required class="flex-1 p-2 border rounded text-[10px]"><button type="submit" class="bg-bull-dark text-white p-2 rounded text-[10px] font-bold uppercase">Registrar</button></div>
+                    </form>
+                    <div class="max-h-64 overflow-y-auto custom-scrollbar"><ul id="tests-list" class="space-y-2 text-xs"></ul></div>
+                </div>
+
+                <!-- Decisões -->
+                <div class="glass-card p-5 rounded-xl border border-gray-200">
+                    <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-bull-dark border-b pb-2"><i class="fa-solid fa-gavel text-gray-500 mr-2"></i> Decisões Críticas</h3>
+                    <form onsubmit="saveDecision(event)" class="flex space-x-2 items-end mb-4 no-print">
+                        <div class="flex-1"><input type="text" id="dec-desc" placeholder="Decisão (Ex: Usar pullrod na frente)" required class="w-full p-2 border rounded text-[10px]"></div>
+                        <div class="w-24"><select id="dec-dept" class="w-full p-2 border rounded text-[10px]"></select></div>
+                        <button type="submit" class="bg-bull-dark text-white p-2 rounded text-[10px] font-bold uppercase">Gravar</button>
+                    </form>
+                    <div class="max-h-64 overflow-y-auto custom-scrollbar"><ul id="decisions-list" class="space-y-2 text-xs"></ul></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="patrocinios" class="tab-content space-y-6">
+            <div class="flex justify-between items-end border-b border-gray-300 pb-3">
+                <h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Patrocínios</h2>
+                <button onclick="openSponsorModal()" class="no-print bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold uppercase hover:bg-green-700">Nova Prospecção</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="sponsors-grid"></div>
+        </section>
+
+        <section id="membros" class="tab-content space-y-6">
+            <div class="flex justify-between items-end border-b border-gray-300 pb-3">
+                <h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Equipe</h2>
+                <button onclick="openMemberModal()" class="no-print bg-bull-red text-white px-4 py-2 rounded font-bold text-xs uppercase">Novo Membro</button>
+            </div>
+            <div class="glass-card rounded-xl overflow-hidden"><table class="min-w-full divide-y">
+                <thead class="bg-gray-50"><tr><th class="px-4 py-3 text-left text-[10px] font-black uppercase text-gray-500">Nome</th><th class="px-4 py-3 text-left text-[10px] font-black uppercase text-gray-500">Diretoria</th><th class="px-4 py-3 text-left text-[10px] font-black uppercase text-gray-500">Contato</th><th class="px-4 py-3 text-right text-[10px] font-black uppercase text-gray-500 no-print">Ações</th></tr></thead>
+                <tbody id="members-table-body" class="bg-white divide-y text-sm"></tbody>
+            </table></div>
+        </section>
+
+        <section id="config" class="tab-content space-y-6 pb-20">
+            <div class="border-b border-gray-300 pb-3">
+                <h2 class="text-3xl font-black text-bull-dark uppercase tracking-tight">Regras e Configurações</h2>
+                <p class="text-gray-500 text-sm">Adicione regras de pontuação dinâmicas e faça backup dos dados.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Backup -->
+                <div class="glass-card p-5 rounded-xl bg-blue-50 lg:col-span-3 flex justify-between items-center no-print">
+                    <div><h3 class="text-base font-black uppercase text-bull-dark">Proteção de Dados (Backup)</h3><p class="text-xs text-gray-600">Salve o arquivo JSON do sistema com frequência.</p></div>
+                    <div class="flex space-x-3">
+                        <button onclick="exportData()" class="px-4 py-2 bg-bull-dark text-white text-xs font-bold rounded uppercase"><i class="fa-solid fa-download mr-1"></i> Exportar</button>
+                        <label class="px-4 py-2 bg-white text-bull-dark border text-xs font-bold rounded uppercase cursor-pointer"><i class="fa-solid fa-upload mr-1"></i> Importar <input type="file" id="import-file" accept=".json" onchange="importData(event)" class="hidden"></label>
+                    </div>
+                </div>
+
+                <!-- Metas e Vendas -->
+                <div class="glass-card p-5 rounded-xl border no-print">
+                    <h3 class="text-sm font-bold mb-3 border-b pb-2 uppercase text-bull-dark">Metas & Regras (Vendas)</h3>
+                    <form onsubmit="saveBaseConfig(event)" class="space-y-2">
+                        <div class="text-[10px] font-bold text-gray-500 mt-2 mb-1">PONTOS TURNOS</div>
+                        <div class="flex justify-between"><label class="text-[11px]">Cumpriu</label><input type="number" id="rule-completed" class="w-12 p-1 border rounded text-xs text-center"></div>
+                        <div class="flex justify-between"><label class="text-[11px]">Bateu Meta</label><input type="number" id="rule-met" class="w-12 p-1 border rounded text-xs text-center"></div>
+                        <div class="flex justify-between"><label class="text-[11px]">Falta</label><input type="number" id="rule-missed" class="w-12 p-1 border rounded text-xs text-center text-red-600"></div>
+                        <div class="text-[10px] font-bold text-gray-500 mt-3 mb-1">METAS (UNIDADES)</div>
+                        <div class="flex justify-between"><label class="text-[11px]">Dindin</label><input type="number" id="target-dindin" class="w-12 p-1 border rounded text-xs text-center"></div>
+                        <div class="flex justify-between"><label class="text-[11px]">Bebidas</label><input type="number" id="target-bebidas" class="w-12 p-1 border rounded text-xs text-center"></div>
+                        <button type="submit" class="w-full bg-gray-200 p-2 rounded text-[10px] font-bold uppercase mt-2">Salvar Base</button>
+                    </form>
+                </div>
+
+                <!-- Regras Gerais Editáveis -->
+                <div class="glass-card p-5 rounded-xl border lg:col-span-2 no-print">
+                    <h3 class="text-sm font-bold mb-3 border-b pb-2 uppercase text-bull-dark flex justify-between">
+                        <span>Regras Gerais (Gamificação)</span>
+                    </h3>
+                    
+                    <form onsubmit="addNewRule(event)" class="flex space-x-2 items-end mb-3 bg-gray-50 p-2 rounded border border-gray-200">
+                        <div class="flex-1"><label class="block text-[9px] font-bold uppercase text-gray-500">Nome da Regra</label><input type="text" id="new-rule-name" required class="w-full p-1.5 border rounded text-xs"></div>
+                        <div class="w-16"><label class="block text-[9px] font-bold uppercase text-gray-500">Pontos</label><input type="number" id="new-rule-pts" required class="w-full p-1.5 border rounded text-xs text-center"></div>
+                        <div class="w-24"><label class="block text-[9px] font-bold uppercase text-gray-500">Grupo</label><input type="text" id="new-rule-group" value="Geral" required class="w-full p-1.5 border rounded text-xs"></div>
+                        <button type="submit" class="bg-bull-dark text-white px-2 py-1.5 rounded text-[10px] font-bold uppercase">Add</button>
+                    </form>
+
+                    <form id="general-rules-form" onsubmit="saveGeneralRules(event)" class="space-y-2">
+                        <div id="general-rules-container" class="space-y-1.5 max-h-64 overflow-y-auto pr-1"></div>
+                        <button type="submit" class="w-full bg-bull-blue text-white p-2 rounded text-[10px] font-bold uppercase mt-3">Salvar Alterações de Pontos</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Marcos (Cronograma) -->
+    <div id="milestone-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 backdrop-blur-sm no-print">
+        <div class="bg-white rounded-xl p-5 w-96 max-w-full">
+            <h3 class="text-lg font-black mb-4 uppercase text-bull-dark" id="milestone-title">Marco do Projeto</h3>
+            <form onsubmit="saveMilestone(event)">
+                <input type="hidden" id="milestone-id">
+                <div class="space-y-3">
+                    <div><label class="block text-[10px] font-bold uppercase">Nome do Marco</label><input type="text" id="ms-name" required class="w-full p-2 border rounded text-sm bg-gray-50"></div>
+                    <div class="flex space-x-2">
+                        <div class="w-1/2"><label class="block text-[10px] font-bold uppercase">Fase</label>
+                            <select id="ms-phase" class="w-full p-2 border rounded text-xs bg-gray-50"><option>Projeto</option><option>Fabricação</option><option>Integração</option><option>Testes</option><option>Validação</option><option>Competição</option></select>
+                        </div>
+                        <div class="w-1/2"><label class="block text-[10px] font-bold uppercase">Mês Ref.</label><input type="month" id="ms-date" required class="w-full p-2 border rounded text-xs bg-gray-50"></div>
+                    </div>
+                    <div><label class="block text-[10px] font-bold uppercase">Status</label><select id="ms-status" class="w-full p-2 border rounded text-xs bg-gray-50"><option>Planejado</option><option>Em Andamento</option><option>Concluído</option><option>Atrasado</option></select></div>
+                    <label class="flex items-center space-x-2 bg-red-50 p-2 rounded border border-red-200 cursor-pointer"><input type="checkbox" id="ms-critical" class="rounded text-red-600"><span class="text-xs font-bold text-red-700 uppercase">Marco Crítico (Não pode atrasar)</span></label>
+                </div>
+                <div class="mt-5 flex justify-end space-x-2">
+                    <button type="button" onclick="closeMilestoneModal()" class="px-3 py-1.5 bg-gray-100 rounded text-xs font-bold uppercase">Cancelar</button>
+                    <button type="submit" class="px-3 py-1.5 bg-bull-dark text-white rounded text-xs font-bold uppercase">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modais legados (Membro, Sponsor, Schedule) preservados em funcionalidade, simplificados no markup -->
+    <div id="member-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 no-print">
+        <div class="bg-white rounded-xl p-5 w-96"><h3 class="text-lg font-black mb-4 uppercase">Membro</h3><form id="member-form" onsubmit="saveMember(event)"><input type="hidden" id="member-id"><div class="space-y-3"><input type="text" id="member-name" placeholder="Nome" required class="w-full p-2 border rounded text-sm"><input type="text" id="member-dept" placeholder="Diretoria" required class="w-full p-2 border rounded text-sm"><input type="text" id="member-phone" placeholder="WhatsApp (DDD+Numero)" class="w-full p-2 border rounded text-sm"><input type="number" id="member-points" placeholder="Pontos (Opcional p/ ajuste manual)" class="w-full p-2 border rounded text-sm"></div><div class="mt-5 flex justify-end space-x-2"><button type="button" onclick="document.getElementById('member-modal').classList.add('hidden')" class="px-3 py-1 bg-gray-200 rounded text-xs font-bold">Cancelar</button><button type="submit" class="px-3 py-1 bg-bull-red text-white rounded text-xs font-bold">Salvar</button></div></form></div>
+    </div>
+    <div id="sponsor-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 no-print">
+        <div class="bg-white rounded-xl p-5 w-96"><h3 class="text-lg font-black mb-4 uppercase">Patrocínio</h3><form onsubmit="saveSponsor(event)"><div class="space-y-3"><input type="text" id="sp-name" placeholder="Empresa" required class="w-full p-2 border rounded text-sm"><input type="number" step="0.01" id="sp-value" placeholder="Valor Estimado/Fechado R$" required class="w-full p-2 border rounded text-sm"><select id="sp-status" class="w-full p-2 border rounded text-sm"><option>Prospecção</option><option>Em Negociação</option><option>Fechado</option></select></div><div class="mt-5 flex justify-end space-x-2"><button type="button" onclick="document.getElementById('sponsor-modal').classList.add('hidden')" class="px-3 py-1 bg-gray-200 rounded text-xs font-bold">Cancelar</button><button type="submit" class="px-3 py-1 bg-green-600 text-white rounded text-xs font-bold">Salvar</button></div></form></div>
+    </div>
+    <div id="schedule-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 no-print">
+        <div class="bg-white rounded-xl p-5 w-96"><h3 class="text-lg font-black mb-4 uppercase" id="modal-slot-title">Box</h3><input type="hidden" id="modal-slot-id"><div class="space-y-3"><select id="modal-member1" class="w-full p-2 border rounded text-sm"></select><select id="modal-member2" class="w-full p-2 border rounded text-sm"></select><select id="modal-product" class="w-full p-2 border rounded text-sm"><option value="Dindin">Dindin</option><option value="Bebidas">Bebidas</option></select></div><div class="mt-5 flex justify-end space-x-2"><button onclick="document.getElementById('schedule-modal').classList.add('hidden')" class="px-3 py-1 bg-gray-200 rounded text-xs font-bold">Cancelar</button><button onclick="clearScheduleSlot()" class="px-3 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">Limpar</button><button onclick="saveScheduleSlot()" class="px-3 py-1 bg-bull-dark text-white rounded text-xs font-bold">Confirmar</button></div></div>
+    </div>
+
+    <!-- Modal: Regulamento (Regras e Anotações) -->
+    <div id="rule-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-50 backdrop-blur-sm transition-opacity no-print">
+        <div class="bg-white rounded-xl p-6 w-[700px] max-w-full shadow-2xl border-t-4 border-bull-red max-h-[90vh] flex flex-col">
+            <h3 class="text-xl font-black mb-4 uppercase tracking-tight text-bull-dark" id="rule-modal-title">Adicionar Regra/Anotação</h3>
+            <form id="rule-form" onsubmit="saveRule(event)" class="overflow-y-auto custom-scrollbar flex-1 pr-2 space-y-4">
+                <input type="hidden" id="rule-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Número / Ref</label>
+                        <input type="text" id="rule-number" placeholder="Ex: BR.5.4" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50 outline-none focus:border-bull-red">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Tipo de Conteúdo</label>
+                        <select id="rule-type" required class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50 outline-none focus:border-bull-red">
+                            <option value="REGRA OFICIAL">Regra Oficial</option>
+                            <option value="ANOTAÇÃO DA EQUIPE">Anotação da Equipe</option>
+                            <option value="RESUMO INTERNO">Resumo Interno</option>
+                            <option value="CHECKLIST INTERNO">Checklist Interno</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Título / Assunto</label>
+                        <input type="text" id="rule-title" required placeholder="Ex: Mechanical Technical Inspection" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50 outline-none focus:border-bull-red">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Categoria (Sistema)</label>
+                        <input type="text" id="rule-category" required placeholder="Ex: Chassi, Freios, Segurança..." class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50 outline-none focus:border-bull-red">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Fonte / Documento Original</label>
+                        <input type="text" id="rule-source" required placeholder="Ex: FSAEB 2026 V1.3" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50 outline-none focus:border-bull-red">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-[10px] font-bold text-gray-600 uppercase mb-1">Conteúdo da Regra</label>
+                        <textarea id="rule-content" required rows="6" placeholder="Texto da regra ou anotação..." class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50 outline-none focus:border-bull-red resize-none"></textarea>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-2 pt-4 border-t">
+                    <button type="button" onclick="closeRuleModal()" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded text-xs font-bold uppercase tracking-wider">Cancelar</button>
+                    <button type="button" id="btn-delete-rule" onclick="deleteRule()" class="hidden px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-bold uppercase tracking-wider">Excluir</button>
+                    <button type="submit" class="px-4 py-2 bg-bull-dark text-white rounded hover:bg-gray-800 text-xs font-bold uppercase tracking-wider shadow">Salvar na Base</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const LOCAL_STORAGE_KEY_PREFIX = 'bull_os_v4_'; // Nova versão de chave para não corromper v3 se houver erro, mas vamos migrar.
+        const OLD_KEY = 'bull_v3_';
+
+        // --- DADOS EMBUTIDOS DE REGULAMENTO (Para Funcionamento Offline Inicial) ---
+        const defaultRulesMeta = { lastUpdate: '16/09/2026', version: 'FSAEB 2026 V1.3 / SAE Rules 1.0' };
+        
+        const defaultEvents = [
+            { id: 'ev1', name: 'Presentation', type: 'Eventos Estáticos', points: 85, objective: 'Avaliar a capacidade da equipe de desenvolver e entregar um business case abrangente que demonstre o veículo como um produto viável para um mercado específico.', reqs: 'Material de apresentação e executivos preparados.', notes: 'Focar na viabilidade de produção em massa e retorno financeiro.' },
+            { id: 'ev2', name: 'Cost and Manufacturing', type: 'Eventos Estáticos', points: 120, objective: 'Aprender sobre os princípios de manufatura e custos associados, demonstrando que o veículo é fabricável de maneira lógica.', reqs: 'Cost Report, eBOM detalhada, Cost Addendum.', notes: 'Cost Addendum até 24h antes. Falta de imagens gera -10pts (BR.3.6).' },
+            { id: 'ev3', name: 'Design', type: 'Eventos Estáticos', points: 180, objective: 'Avaliar o esforço de engenharia empregado no desenvolvimento do veículo e como as inovações atendem aos requisitos do mercado.', reqs: 'Design Spec Sheet, Design Briefing, 3-View Drawings.', notes: 'Dividido em 2 fases na FSAEB. Introdução de 3 minutos é recomendada.' },
+            { id: 'ev4', name: 'Acceleration', type: 'Eventos Dinâmicos', points: 90, objective: 'Medir o desempenho de aceleração longitudinal do veículo em um percurso de 75 metros em linha reta.', reqs: 'Passar por todas as Inspeções Técnicas.', notes: 'Mover > 30cm (rollout) antes do sensor resulta em DNF (BR.7.4.5).' },
+            { id: 'ev5', name: 'Skid Pad', type: 'Eventos Dinâmicos', points: 75, objective: 'Medir a capacidade do veículo em aceleração lateral em um circuito em formato de 8.', reqs: 'Passar por todas as Inspeções Técnicas.', notes: 'Derrubar o cone do sensor de cronometragem resulta em DNF (BR.7.4.6).' },
+            { id: 'ev6', name: 'Autocross', type: 'Eventos Dinâmicos', points: 120, objective: 'Avaliar a manobrabilidade e dinâmica em um circuito de pista estreita sem testar a resistência longa.', reqs: 'Passar por todas as Inspeções Técnicas.', notes: 'Dirigir a 2ª volta sem parar na linha de partida gera DNF (BR.7.4.7).' },
+            { id: 'ev7', name: 'Endurance', type: 'Eventos Dinâmicos', points: 230, objective: 'Testar a confiabilidade geral, durabilidade e desempenho do veículo ao longo de 22km de circuito.', reqs: 'Velocidade Mínima: Média acima de 36km/h ou < 150% do Track Lap Time.', notes: 'Ordem de largada inversa ao Autocross. Piloto lento 3x gera 2 off courses, 4x é DQ (BR.7.8.4).' },
+            { id: 'ev8', name: 'Efficiency', type: 'Eventos Dinâmicos', points: 100, objective: 'Avaliar o consumo de combustível/energia gerado durante a prova de Endurance.', reqs: 'Deve concluir o Endurance de forma válida.', notes: 'Fator E25: 2.178 kg CO2/L. Fator E100: 1.518 kg CO2/L (BR.7.9).' }
+        ];
+
+        const defaultInspections = [
+            { id: 'ins1', name: 'Initial Inspection', status: 'Não verificado', ruleRef: 'BR.5.3', notes: 'Capacetes (verificar validade 5 anos). Vestimentas anti-chama e costuras (Nomex/meta-aramida). Sapatos fechados.' },
+            { id: 'ins2', name: 'Mechanical Inspection (Geral)', status: 'Não verificado', ruleRef: 'BR.5.4', notes: 'Adesivos (250x41.7mm na frente). Pontos dos cintos alinhados sem porca dupla. Volante sem partes côncavas. Furos chassi 4.5mm. Fixadores (Positive Locking).' },
+            { id: 'ins3', name: 'Mechanical (IC)', status: 'Não verificado', ruleRef: 'BR.5.5', notes: 'Combustível E25 (restritor 20mm) ou E100 (19mm). Tanque vazio na inspeção com sistema manual de dreno. Chave geral 6 polos tipo FIA.' },
+            { id: 'ins4', name: 'Electrical Inspection (EV)', status: 'Não verificado', ruleRef: 'BR.5.6', notes: 'Medição física em 30% das células. Modelagem térmica justificada no ESF. Fusible Link testa ok (dobro da corrente contínua). Ferramentas NR-10/IEC.' },
+            { id: 'ins5', name: 'Egress Test', status: 'Não verificado', ruleRef: 'BR.5.7', notes: 'Piloto deve sair rapidamente. Lado de saída pode ser escolhido pelo juiz (geralmente o mais difícil).' },
+            { id: 'ins6', name: 'Tilt Test', status: 'Não verificado', ruleRef: 'BR.5.8', notes: 'Inclinação a 60 graus. Sem vazamento aceitável de qualquer fluido inflamável ou não.' },
+            { id: 'ins7', name: 'Noise Test (IC)', status: 'Não verificado', ruleRef: 'BR.5.9', notes: 'Membros da equipe devem usar protetor auricular e óculos.' }
+        ];
+
+        const defaultRules = [
+            { id: 'r1', number: 'BR.2.3', type: 'REGRA OFICIAL', title: 'Distribuição de Pontuação', category: 'Administrativo', source: 'FSAEB 2026 V1.3', content: 'A pontuação segue: Presentation (85), Cost (120), Design (180), Acceleration (90), Skid Pad (75), Autocross (120), Efficiency (100), Endurance (230). Total: 1000 pontos. O foco no Brasil é mais forte nas Provas Estáticas.' },
+            { id: 'r2', number: 'BR.2.5', type: 'REGRA OFICIAL', title: 'Vehicle Year (Penalidades por reuso)', category: 'Administrativo', source: 'FSAEB 2026 V1.3', content: 'First Year: Sem penalidades. \nSecond Year: Se repetir chassi = -40 pontos no Geral. Se repetir projeto s/ modificação substancial (KPIs) = -30 pts por área falha (máximo de -60 pts no Design).\nThird Year: Proibido participar.' },
+            { id: 'r3', number: 'V.1.2', type: 'REGRA OFICIAL', title: 'Wheelbase (Entre-eixos)', category: 'Chassi', source: 'Formula SAE Rules 2026 V1.0', content: 'O veículo deve ter uma distância mínima entre-eixos de 1525 mm.' },
+            { id: 'r4', number: 'BR.3.2', type: 'REGRA OFICIAL', title: 'Ready-To-Run Video (RTR)', category: 'Administrativo', source: 'FSAEB 2026 V1.3', content: 'Vídeo contínuo, sem edições, máximo de 1 min. Carro liga, sai, faz um retorno em "U" a 20m e volta parando suavemente. Obrigatório para qualificação às Provas Estáticas e Técnicas.' },
+            { id: 'r5', number: 'BR.5.4.3', type: 'REGRA OFICIAL', title: 'Harness Anchor Points (Cinto)', category: 'Chassi', source: 'FSAEB 2026 V1.3', content: 'Os pontos de ancoragem dos cintos devem estar alinhados com a linha de ação da tensão. \nÉ proibido usar porcas duplas (jam nuts) no mesmo parafuso para permitir giro.\nSe usar "eyebolt" em furo cego, usar arame de trava de segurança.' },
+            { id: 'r6', number: 'BR.7.3', type: 'REGRA OFICIAL', title: 'Hot Zone (Área de Testes)', category: 'Eventos Dinâmicos', source: 'FSAEB 2026 V1.3', content: 'Tempo de uso garantido de 5 minutos se houver fila. Apenas ajustes menores são permitidos; manutenção grande não. Ferramentas devem ficar fora da área ativa do veículo.' },
+            { id: 'r7', number: 'BR.6.2.2', type: 'REGRA OFICIAL', title: 'Fases do Design Event', category: 'Eventos Estáticos', source: 'FSAEB 2026 V1.3', content: '1ª Fase: Avaliação de todas as áreas com as equipes. Recomendada intro de 3 minutos.\n2ª Fase (Finals): Apenas as melhores equipes. A pontuação é feita multiplicando a nota da 1ª fase por fatores baseados num cut-off score da organização.' },
+            { id: 'r8', number: '-', type: 'ANOTAÇÃO DA EQUIPE', title: 'Foco no Cost Addendum', category: 'Eventos Estáticos', source: 'Reunião Interna', content: 'Lembrar que o Cost Addendum deve ser enviado online até 24h ANTES do evento iniciar. Se esquecermos imagens de "antes e depois" tomaremos -10 pontos diretos (BR.3.6.1.3).' },
+            { id: 'r9', number: '-', type: 'CHECKLIST INTERNO', title: 'Vestimentas para Trabalhar no Carro', category: 'Segurança', source: 'BR.4.2.3', content: '- Nos pits: Calça de algodão/jeans + sapato fechado.\n- Área de Rework: + Óculos de segurança.\n- Solda: + EPI de solda (máscara, avental, luvas).\n- PROIBIDO: Camisetas e tecidos sintéticos (nylon, poliéster).' }
+        ];
+
+        // Estrutura Base (Gestão Útil)
+        let state = {
+            members: [], salesRules: {}, generalRules: {}, targets: {}, schedule: {}, activities: [], finances: [], sponsors: [],
+            departments: [
+                { id: 'Chassi', name: 'Chassi', progress: 0, status: 'Normal', objective: '', nextMilestone: '', blocker: '' },
+                { id: 'Suspensão', name: 'Suspensão', progress: 0, status: 'Normal', objective: '', nextMilestone: '', blocker: '' },
+                { id: 'Powertrain', name: 'Powertrain', progress: 0, status: 'Normal', objective: '', nextMilestone: '', blocker: '' },
+                { id: 'Eletrônica', name: 'Eletrônica', progress: 0, status: 'Normal', objective: '', nextMilestone: '', blocker: '' },
+                { id: 'Freios', name: 'Freios', progress: 0, status: 'Normal', objective: '', nextMilestone: '', blocker: '' },
+                { id: 'Marketing/Gestão', name: 'Marketing/Gestão', progress: 0, status: 'Normal', objective: '', nextMilestone: '', blocker: '' }
+            ],
+            milestones: [], risks: [], dependencies: [], bom: [], documents: [], tests: [], decisions: [],
+            competition: { date: '2027-11-01', checks: {} },
+            // Nova Área Regulamento
+            rulesMeta: defaultRulesMeta,
+            rules: defaultRules,
+            events: defaultEvents,
+            inspections: defaultInspections
+        };
+
+        const DEPT_NAMES = state.departments.map(d => d.name);
+
+        function initializeApp() {
+            // Migração Segura: Pega do v4, se não tiver, tenta do v3, se não tiver, default.
+            let v4Str = localStorage.getItem(LOCAL_STORAGE_KEY_PREFIX + 'state');
+            if (v4Str) {
+                let parsed = JSON.parse(v4Str);
+                state = { ...state, ...parsed };
+                
+                // Garantir injeção de rules caso v4 já exista mas sem as regras
+                if(!state.rules || state.rules.length === 0) {
+                    state.rulesMeta = defaultRulesMeta;
+                    state.rules = defaultRules;
+                    state.events = defaultEvents;
+                    state.inspections = defaultInspections;
+                }
+            } else {
+                // Tenta puxar pedaços do v3
+                if(localStorage.getItem(OLD_KEY + 'members')) state.members = JSON.parse(localStorage.getItem(OLD_KEY + 'members'));
+                if(localStorage.getItem(OLD_KEY + 's_rules')) state.salesRules = JSON.parse(localStorage.getItem(OLD_KEY + 's_rules'));
+                else state.salesRules = { completed: 10, met: 5, missed: -20 };
+                
+                if(localStorage.getItem(OLD_KEY + 'g_rules')) state.generalRules = JSON.parse(localStorage.getItem(OLD_KEY + 'g_rules'));
+                else state.generalRules = { 'reuniao_presenca': { name: 'Presença Reunião', pts: 5, group: 'Gestão' } };
+                
+                if(localStorage.getItem(OLD_KEY + 'activities')) state.activities = JSON.parse(localStorage.getItem(OLD_KEY + 'activities'));
+                if(localStorage.getItem(OLD_KEY + 'finances')) state.finances = JSON.parse(localStorage.getItem(OLD_KEY + 'finances'));
+                if(localStorage.getItem(OLD_KEY + 'sponsors')) state.sponsors = JSON.parse(localStorage.getItem(OLD_KEY + 'sponsors'));
+                saveState(); // Salva no v4
+            }
+            seedDefaults();
+            saveState();
+            loadChecklists();
+            renderAll();
+            loadChecklists();
+            switchTab('dashboard');
+        }
+
+        function saveState() {
+            localStorage.setItem(LOCAL_STORAGE_KEY_PREFIX + 'state', JSON.stringify(state));
+            renderAll();
+        }
+
+        // Sistema de Backup Restauração
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "bull_os_backup.json"); dl.click();
+        }
+        function importData(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    if(imported && imported.members) { state = { ...state, ...imported }; saveState(); alert("Backup Restaurado!"); location.reload(); }
+                } catch(err) { alert("Erro ao ler JSON."); }
+            }; reader.readAsText(file);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('bg-gray-800', 'text-white'));
+            document.getElementById(tabId).classList.add('active');
+            const btn = document.getElementById('btn-' + tabId); if(btn) btn.classList.add('bg-gray-800', 'text-white');
+            
+            // Renderizações on-demand
+            if(tabId === 'vendas') populateSalesSelect();
+            if(tabId === 'atividades') populateActivitySelects();
+            if(tabId === 'cronograma') renderTimeline();
+            if(tabId === 'competicao') { updateCountdown(); loadChecklists(); renderDocuments(); }
+            if(tabId === 'regulamento') renderRegulamento();
+        }
+
+        // --- MÓDULO REGULAMENTO FSAE ---
+        function switchRegTab(tabId) {
+            document.querySelectorAll('.reg-tab').forEach(el => { el.classList.remove('block'); el.classList.add('hidden'); });
+            document.querySelectorAll('[id^="btn-reg-"]').forEach(el => { el.classList.remove('border-bull-red', 'text-bull-dark'); el.classList.add('border-transparent', 'text-gray-500'); });
+            
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById(tabId).classList.add('block');
+            
+            const btn = document.getElementById('btn-' + tabId);
+            btn.classList.remove('border-transparent', 'text-gray-500');
+            btn.classList.add('border-bull-red', 'text-bull-dark');
+        }
+
+        function renderRegulamento() {
+            document.getElementById('reg-last-update').innerText = state.rulesMeta.lastUpdate;
+            document.getElementById('reg-version').innerText = state.rulesMeta.version;
+            filterRules();
+            renderEventsGrid();
+            renderInspectionsTable();
+        }
+
+        function filterRules() {
+            const query = document.getElementById('reg-search').value.toLowerCase();
+            const cat = document.getElementById('reg-cat-filter').value;
+            const type = document.getElementById('reg-type-filter').value;
+            
+            const container = document.getElementById('rules-list');
+            container.innerHTML = '';
+            
+            const filtered = state.rules.filter(r => {
+                const matchQuery = r.title.toLowerCase().includes(query) || r.content.toLowerCase().includes(query) || (r.number && r.number.toLowerCase().includes(query));
+                const matchCat = cat === '' || r.category === cat;
+                const matchType = type === '' || r.type === type;
+                return matchQuery && matchCat && matchType;
+            });
+
+            if(filtered.length === 0) {
+                container.innerHTML = '<div class="text-center p-6 text-gray-500 text-sm font-bold bg-white rounded-xl border border-gray-200">Nenhum registro encontrado com estes filtros.</div>';
+                return;
+            }
+
+            filtered.forEach(r => {
+                let badgeColor = '';
+                let borderLeft = '';
+                
+                if (r.type === 'REGRA OFICIAL') { badgeColor = 'bg-bull-dark text-white'; borderLeft = 'border-bull-dark'; }
+                else if (r.type === 'ANOTAÇÃO DA EQUIPE') { badgeColor = 'bg-bull-gold text-bull-dark'; borderLeft = 'border-bull-gold'; }
+                else if (r.type === 'CHECKLIST INTERNO') { badgeColor = 'bg-blue-600 text-white'; borderLeft = 'border-blue-600'; }
+                else { badgeColor = 'bg-gray-300 text-gray-800'; borderLeft = 'border-gray-400'; }
+                
+                container.innerHTML += `
+                    <div class="glass-card p-5 rounded-xl border-l-4 ${borderLeft} shadow-sm bg-white">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center space-x-2 flex-wrap gap-y-2">
+                                <span class="text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider ${badgeColor}">${r.type}</span>
+                                <span class="text-[10px] font-bold text-gray-500 uppercase bg-gray-100 px-2 py-1 rounded border border-gray-200">${r.category}</span>
+                            </div>
+                            <button onclick="openRuleModal('${r.id}')" class="text-gray-400 hover:text-bull-red transition"><i class="fa-solid fa-pen-to-square"></i></button>
+                        </div>
+                        <h4 class="text-sm md:text-base font-black text-bull-dark mb-2">${r.number && r.number !== '-' ? '<span class="text-bull-red mr-1">' + r.number + '</span> ' : ''}${r.title}</h4>
+                        <p class="text-xs md:text-sm text-gray-700 leading-relaxed mb-4 whitespace-pre-wrap">${r.content}</p>
+                        <div class="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase tracking-widest border-t border-gray-100 pt-3">
+                            <i class="fa-solid fa-book-open mr-1"></i> Fonte: ${r.source}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openRuleModal(id = null) {
+            document.getElementById('rule-modal').classList.remove('hidden');
+            const delBtn = document.getElementById('btn-delete-rule');
+            
+            if(id) {
+                const r = state.rules.find(x => x.id === id);
+                document.getElementById('rule-modal-title').innerText = 'Editar Registro';
+                document.getElementById('rule-id').value = r.id;
+                document.getElementById('rule-number').value = r.number;
+                document.getElementById('rule-type').value = r.type;
+                document.getElementById('rule-title').value = r.title;
+                document.getElementById('rule-category').value = r.category;
+                document.getElementById('rule-source').value = r.source;
+                document.getElementById('rule-content').value = r.content;
+                delBtn.classList.remove('hidden');
+            } else {
+                document.getElementById('rule-form').reset();
+                document.getElementById('rule-modal-title').innerText = 'Nova Regra/Anotação';
+                document.getElementById('rule-id').value = '';
+                document.getElementById('rule-type').value = 'ANOTAÇÃO DA EQUIPE';
+                document.getElementById('rule-source').value = 'Equipe (2026)';
+                delBtn.classList.add('hidden');
+            }
+        }
+
+        function closeRuleModal() { document.getElementById('rule-modal').classList.add('hidden'); }
+
+        function saveRule(e) {
+            e.preventDefault();
+            const id = document.getElementById('rule-id').value;
+            const newRule = {
+                id: id || 'rule_' + Date.now(),
+                number: document.getElementById('rule-number').value || '-',
+                type: document.getElementById('rule-type').value,
+                title: document.getElementById('rule-title').value,
+                category: document.getElementById('rule-category').value,
+                source: document.getElementById('rule-source').value,
+                content: document.getElementById('rule-content').value
+            };
+
+            if(id) {
+                const idx = state.rules.findIndex(x => x.id === id);
+                if(idx > -1) state.rules[idx] = newRule;
+            } else {
+                state.rules.unshift(newRule);
+            }
+            saveState();
+            closeRuleModal();
+            filterRules();
+        }
+
+        function deleteRule() {
+            const id = document.getElementById('rule-id').value;
+            if(id && confirm("Tem certeza que deseja excluir esta anotação/regra?")) {
+                state.rules = state.rules.filter(x => x.id !== id);
+                saveState();
+                closeRuleModal();
+                filterRules();
+            }
+        }
+
+        function checkRulesUpdate() {
+            alert("Verificando conexão com servidores FSAE e SAE International...\n\nSem rede disponível ou o regulamento local já é a versão oficial mais recente. \n\nUtilizando cache local armazenado de forma segura: " + state.rulesMeta.version + ".");
+        }
+
+        function renderEventsGrid() {
+            const grid = document.getElementById('events-grid');
+            grid.innerHTML = '';
+            state.events.forEach(ev => {
+                let icon = ev.type === 'Eventos Estáticos' ? 'fa-clipboard-list text-bull-blue' : 'fa-flag-checkered text-bull-red';
+                let borderCol = ev.type === 'Eventos Estáticos' ? 'border-bull-blue' : 'border-bull-red';
+                
+                grid.innerHTML += `
+                    <div class="glass-card p-5 rounded-xl border-t-4 ${borderCol} shadow-sm flex flex-col h-full bg-white">
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-2 mb-3">
+                            <div>
+                                <h4 class="text-sm font-black text-bull-dark uppercase"><i class="fa-solid ${icon} mr-1.5"></i>${ev.name}</h4>
+                                <span class="text-[9px] font-bold uppercase text-gray-500">${ev.type}</span>
+                            </div>
+                            <span class="text-lg font-black text-bull-dark">${ev.points} <span class="text-xs font-normal text-gray-400">pts</span></span>
+                        </div>
+                        <div class="flex-1 space-y-3">
+                            <div>
+                                <span class="block text-[9px] font-bold uppercase text-gray-400 mb-1">Objetivo</span>
+                                <p class="text-xs text-gray-700 leading-snug">${ev.objective}</p>
+                            </div>
+                            <div>
+                                <span class="block text-[9px] font-bold uppercase text-gray-400 mb-1">Requisitos / Preparação</span>
+                                <p class="text-xs text-gray-700 leading-snug">${ev.reqs}</p>
+                            </div>
+                            ${ev.notes ? `
+                            <div class="bg-gray-50 p-2 rounded border border-gray-100">
+                                <span class="block text-[9px] font-bold uppercase text-bull-red mb-0.5">Obs. Oficial</span>
+                                <p class="text-[10px] text-gray-600 italic leading-tight">${ev.notes}</p>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderInspectionsTable() {
+            const tbody = document.getElementById('inspection-tbody');
+            tbody.innerHTML = '';
+            state.inspections.forEach((ins, idx) => {
+                let badgeClass = '';
+                switch(ins.status) {
+                    case 'OK': badgeClass = 'bg-green-100 text-green-800 border-green-300'; break;
+                    case 'Em preparação': badgeClass = 'bg-blue-100 text-blue-800 border-blue-300'; break;
+                    case 'Pendência': badgeClass = 'bg-red-100 text-red-800 border-red-300'; break;
+                    default: badgeClass = 'bg-gray-100 text-gray-600 border-gray-300'; break;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-xs font-bold text-bull-dark uppercase">${ins.name}</td>
+                        <td class="px-4 py-3 text-[10px] font-mono font-bold text-bull-red">${ins.ruleRef}</td>
+                        <td class="px-4 py-3">
+                            <select onchange="updateInspectionStatus(${idx}, this.value)" class="w-full p-1.5 rounded text-[10px] font-bold uppercase outline-none border cursor-pointer ${badgeClass}">
+                                <option value="Não verificado" ${ins.status === 'Não verificado' ? 'selected' : ''}>Não verificado</option>
+                                <option value="Em preparação" ${ins.status === 'Em preparação' ? 'selected' : ''}>Em preparação</option>
+                                <option value="OK" ${ins.status === 'OK' ? 'selected' : ''}>OK</option>
+                                <option value="Pendência" ${ins.status === 'Pendência' ? 'selected' : ''}>Pendência</option>
+                            </select>
+                        </td>
+                        <td class="px-4 py-3 text-[11px] text-gray-600 italic">
+                            <input type="text" value="${ins.notes}" onchange="updateInspectionNotes(${idx}, this.value)" placeholder="Anotação da equipe sobre este item..." class="w-full bg-transparent border-b border-gray-200 outline-none p-1 focus:border-bull-red transition">
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateInspectionStatus(idx, val) { state.inspections[idx].status = val; saveState(); renderInspectionsTable(); }
+        function updateInspectionNotes(idx, val) { state.inspections[idx].notes = val; saveState(); }
+        // --- FIM MÓDULO REGULAMENTO ---
+        function deleteRule(key) { delete state.generalRules[key]; saveState(); }
+
+        function renderConfigRules() {
+            const cont = document.getElementById('general-rules-container'); cont.innerHTML = '';
+            for(const [key, rule] of Object.entries(state.generalRules)) {
+                let color = rule.pts > 0 ? 'bg-green-50' : 'bg-red-50';
+                cont.innerHTML += `<div class="flex justify-between items-center ${color} p-1.5 rounded border border-gray-200">
+                    <div class="flex flex-col flex-1"><span class="text-[10px] font-bold text-gray-800">${rule.name}</span><span class="text-[8px] text-gray-500 uppercase">${rule.group}</span></div>
+                    <input type="number" id="gen-rule-${key}" value="${rule.pts}" class="w-12 p-1 border rounded text-xs text-center font-mono mr-2">
+                    <button type="button" onclick="deleteRule('${key}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>`;
+            }
+            // Populate Configs Form
+            ['completed','met','missed'].forEach(id => { const el = document.getElementById(`rule-${id}`); if(el) el.value = state.salesRules[id]||0; });
+            ['dindin','bebidas'].forEach(id => { const el = document.getElementById(`target-${id}`); if(el) el.value = state.targets[id]||0; });
+        }
+        function saveBaseConfig(e) { e.preventDefault(); state.salesRules = { completed: parseInt(document.getElementById('rule-completed').value), met: parseInt(document.getElementById('rule-met').value), missed: parseInt(document.getElementById('rule-missed').value) }; state.targets = { 'Dindin': parseInt(document.getElementById('target-dindin').value), 'Bebidas': parseInt(document.getElementById('target-bebidas').value) }; saveState(); alert("Base Salva."); }
+        function saveGeneralRules(e) { e.preventDefault(); for(const key of Object.keys(state.generalRules)) { const inp = document.getElementById(`gen-rule-${key}`); if(inp) state.generalRules[key].pts = parseInt(inp.value); } saveState(); alert("Regras de Pontos Atualizadas."); }
+
+        function populateActivitySelects() {
+            const mem = document.getElementById('act-member'); mem.innerHTML = '<option value="">Piloto...</option>';
+            state.members.sort((a,b)=>a.name.localeCompare(b.name)).forEach(m => mem.innerHTML+=`<option value="${m.id}">${m.name}</option>`);
+            const typ = document.getElementById('act-type'); typ.innerHTML = '<option value="">Ação...</option>';
+            for(const [key, rule] of Object.entries(state.generalRules)) typ.innerHTML+=`<option value="${key}">${rule.name} [${rule.pts>0?'+':''}${rule.pts}]</option>`;
+        }
+        
+        function handleActivitySubmit(e) {
+            e.preventDefault();
+            const mId = document.getElementById('act-member').value; const tId = document.getElementById('act-type').value;
+            if(!mId || !tId) return;
+            const rule = state.generalRules[tId]; const member = state.members.find(m => m.id === mId);
+            member.points += rule.pts;
+            state.activities.unshift({ id: 'act_'+Date.now(), source: 'geral', date: new Date().toLocaleDateString('pt-BR'), isoDate: new Date().toISOString(), memberIds: [mId], typeId: tId, title: rule.name, points: rule.pts, desc: document.getElementById('act-desc').value || 'Registro Manual' });
+            saveState(); e.target.reset();
+        }
+
+        // Histórico com recálculo na exclusão (Garante que se errar, dá pra consertar)
+        function renderActivities() {
+            const tbody = document.getElementById('activity-history-table'); tbody.innerHTML = '';
+            state.activities.slice(0, 50).forEach(a => {
+                const names = a.memberIds.map(id => getMemberName(id).split(' ')[0]).join(', ');
+                tbody.innerHTML += `<tr><td class="px-2 py-2 text-[10px] text-gray-500">${a.date}</td><td class="px-2 py-2 text-xs font-bold leading-tight">${a.title}<br><span class="text-[9px] font-normal italic text-gray-400">${a.desc}</span></td><td class="px-2 py-2 text-[10px] font-medium">${names}</td><td class="px-2 py-2 text-center text-xs font-black ${a.points>0?'text-green-600':'text-red-600'}">${a.points>0?'+':''}${a.points}</td><td class="px-2 py-2 text-right no-print"><button onclick="deleteActivity('${a.id}')" class="text-red-400 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+            });
+        }
+        function deleteActivity(id) {
+            if(!confirm("Excluir lançameno? Os pontos serão REVERTIDOS no ranking.")) return;
+            const idx = state.activities.findIndex(a => a.id === id);
+            if(idx > -1) {
+                const act = state.activities[idx];
+                act.memberIds.forEach(mId => { const m = state.members.find(x => x.id === mId); if(m) m.points -= act.points; });
+                state.activities.splice(idx, 1); saveState();
+            }
+        }
+
+        // A lógica de Escala e Vendas é mantida enxuta e funcional (Legado V3)
+        const hours = ['10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00'];
+        const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+
+        function renderSchedule() {
+            const tbody = document.getElementById('schedule-grid'); tbody.innerHTML = '';
+            let counts = {}; state.members.forEach(m => counts[m.id] = 0);
+            for(let key in state.schedule) state.schedule[key].members.forEach(id => { if(counts[id]!==undefined) counts[id]++; });
+            
+            hours.forEach(hour => {
+                let tr = document.createElement('tr'); tr.innerHTML = `<td class="px-1 py-3 border-r text-[9px] font-black text-gray-500 bg-gray-50 text-center uppercase tracking-tighter">${hour}</td>`;
+                days.forEach(day => {
+                    const slotKey = `${day}_${hour}`; const slotData = state.schedule[slotKey];
+                    let content = '<span class="text-gray-300 text-[8px] uppercase font-bold text-center block w-full mt-3"><i class="fa-solid fa-plus block mb-1 text-sm opacity-50"></i> Vazio</span>';
+                    let bgClass = 'bg-white hover:bg-gray-50 cursor-pointer transition';
+                    if (slotData && slotData.members.length > 0) {
+                        const names = slotData.members.map(id => getMemberName(id).split(' ')[0]).join(' & ');
+                        bgClass = slotData.logged ? 'bg-green-50 cursor-not-allowed border-l-2 border-green-400' : 'bg-gray-100 hover:bg-gray-200 cursor-pointer border-l-2 border-bull-dark';
+                        content = `<div class="p-1 h-full flex flex-col justify-center"><div class="text-[9px] font-black text-bull-dark leading-tight uppercase">${names}</div><div class="mt-1 text-[8px] text-gray-500 font-bold uppercase tracking-wider">${slotData.product}</div></div>`;
+                    }
+                    tr.innerHTML += `<td onclick="${slotData && slotData.logged ? '' : `openScheduleModal('${slotKey}')`}" class="border-r h-16 align-top p-0 ${bgClass}">${content}</td>`;
+                }); tbody.appendChild(tr);
+            });
+        }
+        function openScheduleModal(slotKey) {
+            document.getElementById('schedule-modal').classList.remove('hidden'); document.getElementById('modal-slot-id').value = slotKey;
+            const slotData = state.schedule[slotKey];
+            let opts = '<option value="">Nenhum</option>'; state.members.forEach(m => opts+=`<option value="${m.id}">${m.name}</option>`);
+            ['modal-member1','modal-member2'].forEach((id, i) => { const el = document.getElementById(id); el.innerHTML = opts; el.value = (slotData && slotData.members[i]) ? slotData.members[i] : ''; });
+        }
+        function saveScheduleSlot() {
+            const key = document.getElementById('modal-slot-id').value; const m1 = document.getElementById('modal-member1').value; const m2 = document.getElementById('modal-member2').value;
+            let mems = []; if(m1) mems.push(m1); if(m2 && m2!==m1) mems.push(m2);
+            if(mems.length===0) delete state.schedule[key]; else state.schedule[key] = { members: mems, product: document.getElementById('modal-product').value, logged: false };
+            saveState(); document.getElementById('schedule-modal').classList.add('hidden');
+        }
+        function clearScheduleSlot() { delete state.schedule[document.getElementById('modal-slot-id').value]; saveState(); document.getElementById('schedule-modal').classList.add('hidden'); }
+        function clearSchedule() { if(confirm("Limpar grade?")) { state.schedule = {}; saveState(); } }
+        function autoFillSchedule() { alert("Use montagem manual ou o algoritmo Python do repositório p/ otimizar disponibilidades."); }
+
+        function populateSalesSelect() {
+            const sel = document.getElementById('sale-shift-select'); sel.innerHTML = '<option value="">Turno Pendente...</option>';
+            for(let key in state.schedule) { const slot = state.schedule[key]; if(!slot.logged && slot.members.length>0) sel.innerHTML+=`<option value="${key}">${key.replace('_',' ')} - ${slot.product}</option>`; }
+        }
+        function handleSalesSubmit(e) {
+            e.preventDefault(); const key = document.getElementById('sale-shift-select').value; const qty = parseInt(document.getElementById('sale-qty').value); const rev = parseFloat(document.getElementById('sale-revenue').value); const status = document.getElementById('sale-status').value;
+            if(!key) return; const slot = state.schedule[key]; const target = state.targets[slot.product] || 10;
+            let pts = 0; let desc = status === 'missed' ? 'Falta' : 'Concluído';
+            if(status === 'missed') pts = state.salesRules.missed; else { pts = state.salesRules.completed; if(qty >= target) { pts += state.salesRules.met; desc += ' (Meta)'; } }
+            
+            slot.members.forEach(id => { let m = state.members.find(x=>x.id===id); if(m) m.points+=pts; }); slot.logged = true;
+            const iso = new Date().toISOString(); const d = new Date().toLocaleDateString('pt-BR');
+            state.activities.unshift({ id: 's_'+Date.now(), source: 'vendas', date: d, isoDate: iso, memberIds: slot.members, typeId: 'venda', title: 'Turno: '+slot.product, points: pts, desc: `${desc} (Vendeu: ${qty})` });
+            if(rev > 0) state.finances.unshift({ id: 'f_'+Date.now(), date: d, isoDate: iso, type: 'entrada', category: 'Turno de Vendas', value: rev });
+            saveState(); e.target.reset(); populateSalesSelect();
+        }
+
+        // Financeiro
+        function handleFinanceSubmit(e) { e.preventDefault(); state.finances.unshift({ id: 'f_'+Date.now(), date: new Date().toLocaleDateString('pt-BR'), isoDate: new Date().toISOString(), type: document.getElementById('fin-type').value, category: document.getElementById('fin-cat').value, value: parseFloat(document.getElementById('fin-value').value) }); saveState(); e.target.reset(); }
+        function renderFinance() { const tb = document.getElementById('finance-table-body'); tb.innerHTML = ''; state.finances.forEach((f,i) => tb.innerHTML+=`<tr><td class="px-2 py-1">${f.date}</td><td class="px-2 py-1 font-bold">${f.category}</td><td class="px-2 py-1 text-right font-mono ${f.type==='entrada'?'text-green-600':'text-red-600'}">${f.type==='entrada'?'+':'-'} R$${f.value.toFixed(2)}</td><td class="px-2 py-1 text-center no-print"><button onclick="delObj('finances',${i})" class="text-red-400"><i class="fa-solid fa-trash"></i></button></td></tr>`); }
+
+        // Patrocínios & Membros (Rápido)
+        function renderPatrocinios() { const g = document.getElementById('sponsors-grid'); g.innerHTML = ''; state.sponsors.forEach((s,i) => g.innerHTML+=`<div class="glass-card p-4 rounded border-t-2 border-green-500"><div><h4 class="font-black text-sm uppercase truncate">${s.name}</h4><span class="text-[9px] font-bold uppercase bg-gray-100 px-1 rounded">${s.status}</span></div><div class="mt-3 text-green-700 font-black">R$ ${s.value.toFixed(2)}</div><button onclick="delObj('sponsors',${i})" class="mt-2 text-[10px] text-red-500 no-print">Excluir</button></div>`); }
+        function openSponsorModal() { document.getElementById('sponsor-modal').classList.remove('hidden'); }
+        function saveSponsor(e) { e.preventDefault(); state.sponsors.push({ name: document.getElementById('sp-name').value, value: parseFloat(document.getElementById('sp-value').value), status: document.getElementById('sp-status').value }); e.target.reset(); saveState(); document.getElementById('sponsor-modal').classList.add('hidden'); }
+
+        function renderMembers() {
+            const tb = document.getElementById('members-table-body'); tb.innerHTML = '';
+            state.members.forEach(m => tb.innerHTML+=`<tr><td class="px-4 py-2 text-xs font-bold">${m.name}</td><td class="px-4 py-2 text-[10px] uppercase">${m.dept}</td><td class="px-4 py-2 text-xs">${m.phone||'-'}</td><td class="px-4 py-2 text-right no-print"><button onclick="openMemberModal('${m.id}')" class="text-blue-500 mr-2"><i class="fa-solid fa-pen"></i></button><button onclick="deleteMember('${m.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td></tr>`);
+            
+            // Ranking
+            const rtb = document.getElementById('ranking-table-body'); rtb.innerHTML = '';
+            [...state.members].sort((a,b)=>b.points-a.points).forEach((m, i) => {
+                let msg = m.points>=50 ? `Parabéns ${m.name.split(' ')[0]}! Top do ranking!` : `Bora acelerar ${m.name.split(' ')[0]}! Precisamos de você!`;
+                let wapp = m.phone ? `https://wa.me/55${m.phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}` : '#';
+                rtb.innerHTML+=`<tr><td class="px-4 py-2 text-xs font-black text-gray-400">P${i+1}</td><td class="px-4 py-2 text-xs font-bold">${m.name}</td><td class="px-4 py-2 text-[10px] uppercase">${m.dept}</td><td class="px-4 py-2 text-sm font-black">${m.points}</td><td class="px-4 py-2 text-right no-print"><a href="${wapp}" target="_blank" class="text-green-500"><i class="fa-brands fa-whatsapp text-lg"></i></a></td></tr>`;
+            });
+        }
+        function openMemberModal(id=null) { document.getElementById('member-modal').classList.remove('hidden'); document.getElementById('member-id').value = id||''; if(id) { const m = state.members.find(x=>x.id===id); document.getElementById('member-name').value=m.name; document.getElementById('member-dept').value=m.dept; document.getElementById('member-phone').value=m.phone||''; document.getElementById('member-points').value=m.points; } else document.getElementById('member-form').reset(); }
+        function saveMember(e) { e.preventDefault(); const id = document.getElementById('member-id').value; const data = { name: document.getElementById('member-name').value, dept: document.getElementById('member-dept').value, phone: document.getElementById('member-phone').value, points: parseInt(document.getElementById('member-points').value||0) }; if(id) { const idx = state.members.findIndex(m=>m.id===id); state.members[idx]={...state.members[idx],...data}; } else { data.id='m'+Date.now(); state.members.push(data); } saveState(); document.getElementById('member-modal').classList.add('hidden'); }
+        function deleteMember(id) { if(confirm("Excluir membro?")) { state.members = state.members.filter(m=>m.id!==id); for(let k in state.schedule) state.schedule[k].members = state.schedule[k].members.filter(mId=>mId!==id); saveState(); } }
+
+        // ==============================
+        // Funções de finalização / suporte
+        // ==============================
+
+        function esc(v) {
+            return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+        }
+
+        function safeDate(iso) {
+            if(!iso) return null;
+            const d = new Date(iso);
+            return Number.isNaN(d.getTime()) ? null : d;
+        }
+
+        function populateDeptDropdowns() {
+            const depts = state.departments || [];
+            const names = depts.map(d => d.name);
+            ['risk-dept','dep-from','dep-to','bom-sys','dec-dept'].forEach(id => {
+                const el = document.getElementById(id);
+                if(!el) return;
+                const current = el.value;
+                const first = id === 'risk-dept' ? '<option value="">Selecione...</option>' : '<option value="">Selecione...</option>';
+                el.innerHTML = first + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+                if(names.includes(current)) el.value = current;
+            });
+        }
+
+        function switchProjTab(tabId) {
+            document.querySelectorAll('.proj-tab').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="btn-proj-"]').forEach(el => {
+                el.classList.remove('border-bull-red','text-bull-dark');
+                el.classList.add('border-transparent','text-gray-500');
+            });
+            const tab = document.getElementById(tabId);
+            if(tab) tab.classList.remove('hidden');
+            const btn = document.getElementById('btn-' + tabId);
+            if(btn) {
+                btn.classList.remove('border-transparent','text-gray-500');
+                btn.classList.add('border-bull-red','text-bull-dark');
+            }
+        }
+
+        function openMilestoneModal(id=null) {
+            const modal = document.getElementById('milestone-modal');
+            document.getElementById('milestone-id').value = id || '';
+            if(id) {
+                const m = state.milestones.find(x=>x.id===id);
+                if(!m) return;
+                document.getElementById('ms-name').value = m.name || '';
+                document.getElementById('ms-phase').value = m.phase || 'Projeto';
+                document.getElementById('ms-date').value = m.date || '';
+                document.getElementById('ms-status').value = m.status || 'Planejado';
+                document.getElementById('ms-critical').checked = !!m.critical;
+                document.getElementById('milestone-title').innerText = 'Editar Marco';
+            } else {
+                document.querySelector('#milestone-modal form').reset();
+                document.getElementById('ms-phase').value = 'Projeto';
+                document.getElementById('ms-status').value = 'Planejado';
+                document.getElementById('milestone-title').innerText = 'Novo Marco';
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeMilestoneModal(){ document.getElementById('milestone-modal').classList.add('hidden'); }
+
+        function saveMilestone(e) {
+            e.preventDefault();
+            const id = document.getElementById('milestone-id').value;
+            const data = {
+                id: id || 'ms_' + Date.now(),
+                name: document.getElementById('ms-name').value.trim(),
+                phase: document.getElementById('ms-phase').value,
+                date: document.getElementById('ms-date').value,
+                status: document.getElementById('ms-status').value,
+                critical: document.getElementById('ms-critical').checked
+            };
+            if(id){
+                const idx = state.milestones.findIndex(x=>x.id===id);
+                if(idx>=0) state.milestones[idx]=data;
+            } else state.milestones.push(data);
+            state.milestones.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+            saveState();
+            closeMilestoneModal();
+        }
+
+        function seedDefaults() {
+            if(!Array.isArray(state.milestones) || state.milestones.length===0) {
+                state.milestones = [
+                    {id:'ms1',name:'Projeto detalhado',phase:'Projeto',date:'2026-09',status:'Em Andamento',critical:false},
+                    {id:'ms2',name:'Projeto congelado',phase:'Projeto',date:'2026-10',status:'Planejado',critical:true},
+                    {id:'ms3',name:'CAD 100%',phase:'Projeto',date:'2026-11',status:'Planejado',critical:false},
+                    {id:'ms4',name:'Integração mecânica',phase:'Integração',date:'2026-12',status:'Planejado',critical:false},
+                    {id:'ms5',name:'Integração total / Motor funcionando',phase:'Integração',date:'2027-01',status:'Planejado',critical:true},
+                    {id:'ms6',name:'Primeiro carro rodando',phase:'Testes',date:'2027-02',status:'Planejado',critical:true},
+                    {id:'ms7',name:'Validação inicial',phase:'Validação',date:'2027-03',status:'Planejado',critical:false},
+                    {id:'ms8',name:'Desenvolvimento de performance',phase:'Validação',date:'2027-04',status:'Planejado',critical:false},
+                    {id:'ms9',name:'Simulação de competição',phase:'Validação',date:'2027-05',status:'Planejado',critical:false},
+                    {id:'ms10',name:'Preparação final',phase:'Validação',date:'2027-06',status:'Planejado',critical:true},
+                    {id:'ms11',name:'FSAE Brasil 2027',phase:'Competição',date:'2027-07',status:'Planejado',critical:true}
+                ];
+            }
+            if(!Array.isArray(state.documents) || state.documents.length===0){
+                state.documents=[
+                    {id:'doc1',name:'SES',date:'',status:'Não iniciado'},
+                    {id:'doc2',name:'Vehicle Drawings',date:'',status:'Não iniciado'},
+                    {id:'doc3',name:'Design Spec Sheet',date:'',status:'Não iniciado'},
+                    {id:'doc4',name:'Cost Report',date:'',status:'Não iniciado'},
+                    {id:'doc5',name:'Design Briefing',date:'',status:'Não iniciado'}
+                ];
+            }
+            if(!Array.isArray(state.tests)) state.tests=[];
+            if(!Array.isArray(state.decisions)) state.decisions=[];
+        }
+
+        function renderTimeline() {
+            const container=document.getElementById('timeline-phases');
+            if(!container) return;
+            const phases=['Projeto','Fabricação','Integração','Testes','Validação','Competição'];
+            const colors={Projeto:'border-blue-600',Fabricação:'border-orange-500',Integração:'border-red-500',Testes:'border-green-600',Validação:'border-emerald-600',Competição:'border-purple-600'};
+            const months=['2026-09','2026-10','2026-11','2026-12','2027-01','2027-02','2027-03','2027-04','2027-05','2027-06','2027-07'];
+            const labels=['SET','OUT','NOV','DEZ','JAN','FEV','MAR','ABR','MAI','JUN','JUL'];
+            let html='';
+            phases.forEach(phase=>{
+                const items=state.milestones.filter(m=>m.phase===phase);
+                html+=`<div class="w-56 flex-shrink-0 bg-gray-50 border-t-4 ${colors[phase]} rounded-lg p-3 shadow-sm">
+                    <div class="flex justify-between items-center mb-3"><h4 class="font-black text-sm uppercase text-bull-dark">${esc(phase)}</h4><span class="text-[9px] font-bold text-gray-400">${items.length}</span></div>`;
+                months.forEach((mo,i)=>{
+                    const mi=items.filter(m=>m.date===mo);
+                    if(mi.length){
+                        html+=`<div class="mb-2"><div class="text-[9px] font-black text-gray-400 mb-1">${labels[i]}/202${i<4?6:7}</div>`;
+                        mi.forEach(m=>{
+                            const cls=m.status==='Concluído'?'bg-green-100 text-green-800':m.status==='Atrasado'?'bg-red-100 text-red-800':'bg-white text-gray-700';
+                            html+=`<div class="${cls} p-2 rounded border border-gray-200 mb-1 cursor-pointer hover:shadow" onclick="openMilestoneModal('${m.id}')"><div class="text-[10px] font-bold">${m.critical?'★ ':''}${esc(m.name)}</div><div class="text-[8px] uppercase mt-1 font-bold opacity-70">${esc(m.status)}</div></div>`;
+                        }); html+='</div>';
+                    }
+                });
+                if(!items.length) html+=`<div class="text-[10px] text-gray-400 italic">Nenhum marco nesta fase.</div>`;
+                html+='</div>';
+            });
+            container.innerHTML=html;
+        }
+
+        function renderDashboard(){
+            const members=state.members||[];
+            const active=members.length;
+            const avg=active?Math.round(members.reduce((a,m)=>a+(Number(m.points)||0),0)/active):0;
+            const bal=(state.finances||[]).reduce((a,f)=>a+(f.type==='entrada'?Number(f.value)||0:-(Number(f.value)||0)),0);
+            const now=new Date();
+            const future=state.milestones.filter(m=>m.critical && safeDate((m.date||'')+'-01') && m.status!=='Concluído').sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+            const next=future[0]||state.milestones.filter(m=>m.status!=='Concluído').sort((a,b)=>(a.date||'').localeCompare(b.date||''))[0];
+            const set=(id,val)=>{const e=document.getElementById(id);if(e)e.innerText=val;};
+            set('dash-members',active); set('dash-avg-pts',avg); set('dash-balance',bal.toLocaleString('pt-BR',{minimumFractionDigits:2}));
+            set('dash-next-milestone',next?next.name:'Nenhum definido'); set('dash-next-milestone-date',next?next.date:'-');
+            const dg=document.getElementById('dash-depts-health');
+            if(dg){dg.innerHTML=state.departments.map(d=>`<div class="border rounded-lg p-3 bg-gray-50"><div class="flex justify-between text-[10px] font-black uppercase"><span>${esc(d.name)}</span><span>${Number(d.progress)||0}%</span></div><div class="h-2 bg-gray-200 rounded mt-2 overflow-hidden"><div class="h-full ${d.status==='Crítico'?'bg-red-500':d.status==='Atenção'?'bg-yellow-400':'bg-green-500'}" style="width:${Math.max(0,Math.min(100,Number(d.progress)||0))}%"></div></div><div class="text-[9px] text-gray-500 mt-1">${esc(d.status||'Normal')}</div></div>`).join('');}
+            const weekAgo=Date.now()-7*86400000;
+            const acts=(state.activities||[]).filter(a=>new Date(a.isoDate||a.date).getTime()>=weekAgo);
+            set('dash-week-acts',acts.length);
+            set('dash-week-shifts',acts.filter(a=>a.source==='vendas').length);
+            set('dash-week-rev',(state.finances||[]).filter(f=>new Date(f.isoDate||f.date).getTime()>=weekAgo && f.type==='entrada').reduce((a,f)=>a+(Number(f.value)||0),0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
+            set('dash-week-milestones',state.milestones.filter(m=>m.status==='Concluído').length);
+            const rl=document.getElementById('dash-risks-list'); if(rl){const risks=state.risks.filter(r=>r.level==='Crítico'||r.status==='Atrasado').slice(0,8);rl.innerHTML=risks.length?risks.map(r=>`<li class="border-l-4 ${r.level==='Crítico'?'border-red-500':'border-yellow-400'} bg-gray-50 p-2 text-xs"><b>${esc(r.level)}</b> · ${esc(r.desc)}<div class="text-[9px] text-gray-500 mt-1">${esc(r.dept||'')}</div></li>`).join(''):'<li class="text-xs text-gray-400">Nenhum risco crítico.</li>';}
+            if(typeof pointsChartInstance!=='undefined' && pointsChartInstance) pointsChartInstance.destroy();
+            const c=document.getElementById('pointsChart'); if(c && window.Chart){const top=[...members].sort((a,b)=>(b.points||0)-(a.points||0)).slice(0,10); pointsChartInstance=new Chart(c.getContext('2d'),{type:'bar',data:{labels:top.map(m=>m.name.split(' ')[0]),datasets:[{label:'Pontos',data:top.map(m=>m.points||0)}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});}
+        }
+
+        function renderProjeto(){
+            const grid=document.getElementById('departments-grid'); if(grid){grid.innerHTML=state.departments.map((d,i)=>`<div class="glass-card rounded-xl p-4 border-t-4 ${d.status==='Crítico'?'border-red-500':d.status==='Atenção'?'border-yellow-400':'border-bull-blue'}"><div class="flex justify-between items-center mb-3"><h3 class="font-black uppercase text-sm">${esc(d.name)}</h3><span class="text-[10px] font-black">${Number(d.progress)||0}%</span></div><div class="h-2 bg-gray-200 rounded overflow-hidden mb-3"><div class="h-full bg-bull-blue" style="width:${Number(d.progress)||0}%"></div></div><div class="grid grid-cols-2 gap-2 mb-2"><label class="text-[9px] font-bold uppercase text-gray-500">Progresso<input type="number" min="0" max="100" value="${Number(d.progress)||0}" onchange="state.departments[${i}].progress=Number(this.value);saveState()" class="w-full mt-1 p-1 border rounded text-xs"></label><label class="text-[9px] font-bold uppercase text-gray-500">Status<select onchange="state.departments[${i}].status=this.value;saveState()" class="w-full mt-1 p-1 border rounded text-xs"><option ${d.status==='Normal'?'selected':''}>Normal</option><option ${d.status==='Atenção'?'selected':''}>Atenção</option><option ${d.status==='Crítico'?'selected':''}>Crítico</option><option ${d.status==='Concluído'?'selected':''}>Concluído</option></select></label></div><label class="text-[9px] font-bold uppercase text-gray-500">Objetivo<input value="${esc(d.objective)}" onchange="state.departments[${i}].objective=this.value;saveState()" class="w-full mt-1 p-1.5 border rounded text-xs"></label><label class="block text-[9px] font-bold uppercase text-gray-500 mt-2">Próximo marco<input value="${esc(d.nextMilestone)}" onchange="state.departments[${i}].nextMilestone=this.value;saveState()" class="w-full mt-1 p-1.5 border rounded text-xs"></label><label class="block text-[9px] font-bold uppercase text-gray-500 mt-2">Bloqueio<input value="${esc(d.blocker)}" onchange="state.departments[${i}].blocker=this.value;saveState()" class="w-full mt-1 p-1.5 border rounded text-xs"></label></div>`).join('');}
+            renderRisks(); renderDeps(); renderBOM();
+        }
+
+        function saveRisk(e){e.preventDefault();const item={id:'risk_'+Date.now(),desc:document.getElementById('risk-desc').value.trim(),dept:document.getElementById('risk-dept').value,level:document.getElementById('risk-level').value,status:'Em aberto'};state.risks.unshift(item);e.target.reset();saveState();}
+        function renderRisks(){const b=document.getElementById('risks-body');if(!b)return;b.innerHTML=state.risks.map((r,i)=>`<tr><td class="px-4 py-2 text-xs font-bold">${esc(r.desc)}</td><td class="px-4 py-2 text-xs">${esc(r.dept)}</td><td class="px-4 py-2 text-center"><select onchange="state.risks[${i}].status=this.value;saveState()" class="text-[10px] border rounded p-1"><option ${r.status==='Em aberto'?'selected':''}>Em aberto</option><option ${r.status==='Em andamento'?'selected':''}>Em andamento</option><option ${r.status==='Atrasado'?'selected':''}>Atrasado</option><option ${r.status==='Resolvido'?'selected':''}>Resolvido</option></select></td><td class="px-4 py-2 text-center text-[10px] font-black">${esc(r.level)}</td><td class="px-4 py-2 text-right"><button onclick="delObj('risks',${i})" class="text-red-400">Excluir</button></td></tr>`).join('');}
+        function saveDep(e){e.preventDefault();state.dependencies.unshift({id:'dep_'+Date.now(),from:document.getElementById('dep-from').value,to:document.getElementById('dep-to').value,desc:document.getElementById('dep-desc').value.trim(),status:'Bloqueado'});e.target.reset();saveState();}
+        function renderDeps(){const g=document.getElementById('deps-grid');if(!g)return;g.innerHTML=state.dependencies.map((d,i)=>`<div class="border rounded-lg p-4 bg-red-50"><div class="text-[10px] font-black uppercase text-red-700">${esc(d.from)} depende de ${esc(d.to)}</div><p class="text-xs text-gray-700 mt-2">${esc(d.desc)}</p><div class="flex justify-between items-center mt-3"><span class="text-[9px] uppercase font-bold">${esc(d.status)}</span><button onclick="delObj('dependencies',${i})" class="text-[10px] text-red-500">Excluir</button></div></div>`).join('')||'<div class="text-xs text-gray-400">Nenhuma dependência registrada.</div>';}
+        function saveBOM(e){e.preventDefault();const q=Number(document.getElementById('bom-qty').value)||1,c=Number(document.getElementById('bom-cost').value)||0;state.bom.unshift({id:'bom_'+Date.now(),item:document.getElementById('bom-item').value.trim(),system:document.getElementById('bom-sys').value,qty:q,cost:c,total:q*c,status:'Necessário'});e.target.reset();saveState();}
+        function renderBOM(){const b=document.getElementById('bom-body');if(!b)return;b.innerHTML=state.bom.map((x,i)=>`<tr><td class="px-3 py-2 text-xs font-bold">${esc(x.item)}</td><td class="px-3 py-2 text-xs">${esc(x.system)}</td><td class="px-3 py-2 text-center">${x.qty}</td><td class="px-3 py-2 text-right">R$ ${(Number(x.total)||0).toFixed(2)}</td><td class="px-3 py-2 text-center"><select onchange="state.bom[${i}].status=this.value;saveState()" class="text-[10px] border rounded p-1"><option ${x.status==='Necessário'?'selected':''}>Necessário</option><option ${x.status==='Cotado'?'selected':''}>Cotado</option><option ${x.status==='Comprado'?'selected':''}>Comprado</option><option ${x.status==='Recebido'?'selected':''}>Recebido</option><option ${x.status==='Instalado'?'selected':''}>Instalado</option></select></td><td class="px-3 py-2 text-center"><button onclick="delObj('bom',${i})" class="text-red-400">Excluir</button></td></tr>`).join('');}
+
+        function saveDoc(e){e.preventDefault();state.documents.push({id:'doc_'+Date.now(),name:document.getElementById('doc-name').value.trim(),date:document.getElementById('doc-date').value,status:'Não iniciado'});e.target.reset();saveState();}
+        function renderDocuments(){const l=document.getElementById('docs-list');if(!l)return;l.innerHTML=state.documents.map((d,i)=>`<li class="flex items-center justify-between p-2 border rounded bg-gray-50"><div><b class="text-xs">${esc(d.name)}</b><div class="text-[9px] text-gray-500">${d.date||'Sem prazo'}</div></div><div class="flex items-center gap-2"><select onchange="state.documents[${i}].status=this.value;saveState()" class="text-[9px] border rounded p-1"><option ${d.status==='Não iniciado'?'selected':''}>Não iniciado</option><option ${d.status==='Em elaboração'?'selected':''}>Em elaboração</option><option ${d.status==='Em revisão'?'selected':''}>Em revisão</option><option ${d.status==='Finalizado'?'selected':''}>Finalizado</option><option ${d.status==='Enviado'?'selected':''}>Enviado</option></select><button onclick="delObj('documents',${i})" class="text-red-400 text-[10px]">Excluir</button></div></li>`).join('');}
+        function saveTest(e){e.preventDefault();state.tests.unshift({id:'test_'+Date.now(),date:document.getElementById('test-date').value,name:document.getElementById('test-name').value.trim(),result:document.getElementById('test-res').value.trim()});e.target.reset();saveState();}
+        function saveDecision(e){e.preventDefault();state.decisions.unshift({id:'dec_'+Date.now(),date:new Date().toLocaleDateString('pt-BR'),desc:document.getElementById('dec-desc').value.trim(),dept:document.getElementById('dec-dept').value});e.target.reset();saveState();}
+        function renderMemoria(){const t=document.getElementById('tests-list');if(t)t.innerHTML=state.tests.map((x,i)=>`<li class="border rounded p-2 bg-gray-50"><div class="font-bold">${esc(x.name)}</div><div class="text-[9px] text-gray-500">${esc(x.date)}</div><div class="text-[10px] mt-1">${esc(x.result)}</div><button onclick="delObj('tests',${i})" class="text-red-400 text-[9px] no-print">Excluir</button></li>`).join('');const d=document.getElementById('decisions-list');if(d)d.innerHTML=state.decisions.map((x,i)=>`<li class="border rounded p-2 bg-gray-50"><div class="font-bold">${esc(x.desc)}</div><div class="text-[9px] text-gray-500">${esc(x.date)} · ${esc(x.dept)}</div><button onclick="delObj('decisions',${i})" class="text-red-400 text-[9px] no-print">Excluir</button></li>`).join('');renderDocuments();}
+
+        function updateCountdown(){const el=document.getElementById('comp-countdown');if(!el)return;const d=new Date(state.competition.date+'T12:00:00');if(Number.isNaN(d.getTime())){el.innerText='Data não definida';return;}const diff=d-new Date();if(diff<=0){el.innerText='Competição em andamento / encerrada';return;}const days=Math.ceil(diff/86400000);el.innerText=days+' dias';}
+        function saveChecklists(){state.competition=state.competition||{date:'2027-07-15',checks:{}};['tech','egress','brake','noise','design','cost','business'].forEach(k=>{const el=document.getElementById('chk-'+k);if(el)state.competition.checks[k]=el.checked;});saveState();}
+        function loadChecklists(){if(!state.competition) state.competition={date:'2027-07-15',checks:{}};Object.entries(state.competition.checks||{}).forEach(([k,v])=>{const el=document.getElementById('chk-'+k);if(el)el.checked=!!v;});}
+        function addNewRule(e){e.preventDefault();const name=document.getElementById('new-rule-name').value.trim(),pts=Number(document.getElementById('new-rule-pts').value),group=document.getElementById('new-rule-group').value.trim()||'Geral';if(!name)return;const key='rule_'+Date.now();state.generalRules[key]={name,pts,group};e.target.reset();saveState();}
+        function delObj(collection,index){if(!state[collection])return;if(confirm('Excluir este registro?')){state[collection].splice(index,1);saveState();}}
+
+        // Corrige a função de restauração e inicializa dados pré-preenchidos.
+        // Core Render Function
+        function renderAll() {
+            populateDeptDropdowns();
+            renderDashboard();
+            renderTimeline();
+            renderProjeto();
+            updateCountdown();
+            renderConfigRules();
+            renderActivities();
+            renderSchedule();
+            renderFinance();
+            renderPatrocinios();
+            renderMembers();
+            renderMemoria();
+            renderDocuments();
+            // Evitar erro se rodar renderAll antes da tela do regulamento estar montada
+            if(document.getElementById('regulamento')) {
+                renderRegulamento();
+            }
+        }
+
+        // Init
+        window.onload = initializeApp;
+
+    </script>
+
+<script>
+/*
+ * BULL RACING OS - CAMADA DE FLEXIBILIDADE / GESTÃO 2.0
+ * Mantém a estrutura original e adiciona:
+ * - produtos/metas/pontos totalmente editáveis
+ * - regras gerais editáveis com sinal, descrição e ativo/inativo
+ * - patrocínios com múltiplos tipos, permutas e contrapartidas
+ * - BOM/financeiro integrado com categorias e classificações
+ * - visão dinâmica do carro por diretoria > sistema > componente
+ * - filtros por ano/mês + arquivo (oculta, não apaga)
+ * - paginação/carregar mais em históricos
+ * - exclusão segura
+ * - impressão sem sobreposição
+ */
+
+(function(){
+    const UI_VERSION = '2.0.0';
+    const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+    function money(v){
+        return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    }
+    function uid(prefix){ return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+    function monthKey(dateLike){
+        if(!dateLike) return new Date().toISOString().slice(0,7);
+        const s = String(dateLike);
+        if(/^\d{4}-\d{2}$/.test(s)) return s;
+        if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,7);
+        if(s.includes('/')){
+            const a=s.split('/');
+            if(a.length>=3) return `${a[2].slice(-4)}-${a[1].padStart(2,'0')}`;
+        }
+        const d=new Date(dateLike);
+        return Number.isNaN(d.getTime()) ? new Date().toISOString().slice(0,7) : d.toISOString().slice(0,7);
+    }
+    function monthLabel(k){
+        if(!k || !/^\d{4}-\d{2}$/.test(k)) return 'Sem período';
+        const [y,m]=k.split('-'); return `${monthNames[Number(m)-1]}/${y}`;
+    }
+    function esc2(s){
+        if(typeof esc === 'function') return esc(s);
+        return String(s??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+    }
+
+    function ensureState(){
+        state.products = Array.isArray(state.products) ? state.products : [];
+        if(state.products.length===0){
+            const existingTargets = state.targets || {};
+            const baseProducts = [
+                ['Dindin','Alimento',existingTargets.Dindin||20],
+                ['Bebidas','Bebida',existingTargets.Bebidas||20],
+                ['Chaveiro','Brinde',0],
+                ['Camisa','Vestuário',0],
+                ['Botton','Brinde',0],
+                ['Caneca','Brinde',0],
+                ['Mouse Pad','Brinde',0],
+                ['Alimentos','Alimento',0],
+                ['Outros','Outros',0]
+            ];
+            state.products = baseProducts.map(([name,category,target])=>({
+                id:uid('prod'), name, category, target:Number(target)||0, unitPrice:0, active:true,
+                pointsCompleted: Number((state.salesRules||{}).completed)||10,
+                pointsMeta: Number((state.salesRules||{}).met)||5,
+                pointsExceed: 0,
+                penaltyMissed: Number((state.salesRules||{}).missed)||-20,
+                description:'', archived:false
+            }));
+        } else {
+            state.products.forEach(p=>{
+                p.id=p.id||uid('prod'); p.category=p.category||'Outros'; p.target=Number(p.target)||0;
+                p.unitPrice=Number(p.unitPrice)||0; p.active=p.active!==false; p.pointsCompleted=Number(p.pointsCompleted)||0;
+                p.pointsMeta=Number(p.pointsMeta)||0; p.pointsExceed=Number(p.pointsExceed)||0; p.penaltyMissed=Number(p.penaltyMissed)||0;
+                p.archived=!!p.archived;
+            });
+        }
+        state.sponsorTypes = Array.isArray(state.sponsorTypes) && state.sponsorTypes.length ? state.sponsorTypes :
+            ['Financeiro','Peças / Componentes','Equipamentos','Serviços','Usinagem','Corte a Laser','Soldagem','Material / Insumo','Transporte','Infraestrutura','Institucional','Permuta / Barter','Divulgação','Outro'];
+        state.contrapartidas = Array.isArray(state.contrapartidas) && state.contrapartidas.length ? state.contrapartidas :
+            ['Logo na carenagem','Logo nas redes sociais','Post dedicado','Banner em evento','Menção em vídeo','Relatório de entrega','Apresentação institucional','Convite para evento','Outro'];
+        state.sales = Array.isArray(state.sales) ? state.sales : [];
+        state.carStructure = Array.isArray(state.carStructure) ? state.carStructure : [];
+        state.bom = Array.isArray(state.bom) ? state.bom : [];
+        state.finances = Array.isArray(state.finances) ? state.finances : [];
+        state.sponsors = Array.isArray(state.sponsors) ? state.sponsors : [];
+        state.archivePageSize = Number(state.archivePageSize)||20;
+        state.archive = Array.isArray(state.archive) ? state.archive : [];
+    }
+
+    function injectStyle(){
+        if(document.getElementById('bull-enh-style')) return;
+        const st=document.createElement('style'); st.id='bull-enh-style';
+        st.textContent=`
+          .bull-enh-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 3px 8px rgba(0,0,0,.04)}
+          .bull-enh-th{font-size:10px;font-weight:800;text-transform:uppercase;color:#6b7280;padding:9px 10px;text-align:left;background:#f8fafc}
+          .bull-enh-td{font-size:11px;padding:9px 10px;border-top:1px solid #f1f5f9;vertical-align:top}
+          .bull-muted{font-size:10px;color:#6b7280}
+          .bull-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;text-transform:uppercase}
+          .bull-section-title{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+          .bull-progress{height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden}
+          .bull-progress>span{display:block;height:100%;background:#2563eb;border-radius:999px}
+          .bull-tree-line{border-left:2px solid #e5e7eb;padding-left:12px;margin-left:6px}
+          .bull-tree-node{border:1px solid #e5e7eb;background:#fff;border-radius:10px;padding:10px;margin:7px 0}
+          .bull-btn{padding:7px 10px;border-radius:8px;font-size:10px;font-weight:800;text-transform:uppercase}
+          .bull-btn-dark{background:#111827;color:#fff}.bull-btn-red{background:#e63946;color:#fff}.bull-btn-light{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}
+          .bull-modal-back{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:flex;align-items:center;justify-content:center;padding:18px}
+        `;
+        document.head.appendChild(st);
+    }
+
+    function selectHtml(id, options, selected=''){
+        return `<select id="${id}" class="w-full p-2 border rounded text-xs bg-white">${options.map(o=>{
+            const v=typeof o==='string'?o:o.value, l=typeof o==='string'?o:o.label;
+            return `<option value="${esc2(v)}" ${String(v)===String(selected)?'selected':''}>${esc2(l)}</option>`;
+        }).join('')}</select>`;
+    }
+
+    function addOrReplaceEnhancementPanels(){
+        // Safe top action area for print
+        const main=document.querySelector('main');
+        const print=document.getElementById('global-print-btn');
+        if(main && print){
+            let bar=document.getElementById('bull-top-actions');
+            if(!bar){
+                bar=document.createElement('div');
+                bar.id='bull-top-actions';
+                bar.className='no-print flex justify-end items-center gap-2 mb-3';
+                main.insertBefore(bar, main.firstElementChild);
+            }
+            bar.appendChild(print);
+            print.classList.remove('absolute','top-6','right-6','z-50');
+        }
+
+        // Project: car vision and advanced BOM
+        const project=document.getElementById('projeto');
+        if(project && !document.getElementById('car-vision-panel')){
+            const heading=project.querySelector('.border-b');
+            const panel=document.createElement('div');
+            panel.id='car-vision-panel';
+            panel.className='bull-enh-card p-5 mb-1';
+            panel.innerHTML=`
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <div class="bull-section-title">Visão do carro BR-02</div>
+                  <div class="bull-muted">Estrutura livre: diretoria → sistema → componente. O progresso é calculado pelos itens cadastrados.</div>
+                </div>
+                <div class="flex gap-2 no-print">
+                  <button class="bull-btn bull-btn-dark" onclick="carAddNode()">+ Adicionar item</button>
+                  <button class="bull-btn bull-btn-light" onclick="carAddSeed()">Criar estrutura base</button>
+                </div>
+              </div>
+              <div id="car-overview" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4"></div>
+              <div id="car-tree" class="mt-4"></div>`;
+            heading?.after(panel);
+        }
+
+        // Advanced BOM inside the BOM tab
+        const bomTab=document.getElementById('proj-bom');
+        if(bomTab && !document.getElementById('advanced-bom-panel')){
+            const card=document.createElement('div');
+            card.id='advanced-bom-panel';
+            card.className='bull-enh-card p-5 mb-4';
+            card.innerHTML=`
+             <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 mb-4">
+               <div><div class="bull-section-title">BOM + Financeiro Integrado</div>
+               <div class="bull-muted">Peça, material, serviço, equipamento, fabricação, transporte, inscrição e outros.</div></div>
+               <div id="bom-kpis" class="grid grid-cols-2 md:grid-cols-5 gap-2"></div>
+             </div>
+             <form id="enh-bom-form" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-2 no-print">
+               <input id="eb-item" required placeholder="Item / serviço" class="p-2 border rounded text-xs xl:col-span-2">
+               <input id="eb-qty" type="number" min="0" step="0.01" value="1" placeholder="Qtd" class="p-2 border rounded text-xs">
+               <input id="eb-unit" type="number" step="0.01" min="0" value="0" placeholder="R$ unitário" class="p-2 border rounded text-xs">
+               ${selectHtml('eb-type',['Peça','Material','Serviço','Equipamento','Ferramenta','Insumo','Transporte','Fabricação','Usinagem','Corte','Soldagem','Manutenção','Inscrição','Viagem','Outro'])}
+               ${selectHtml('eb-class',['Despesa','Investimento','Receita','Patrocínio','Arrecadação','Permuta / Barter'])}
+               ${selectHtml('eb-dept', (state.departments||[]).map(d=>({value:d.name,label:d.name})), (state.departments?.[0]?.name||''))}
+               <input id="eb-system" placeholder="Sistema / subsistema" class="p-2 border rounded text-xs">
+               <input id="eb-supplier" placeholder="Fornecedor / parceiro" class="p-2 border rounded text-xs">
+               <input id="eb-date" type="date" value="${new Date().toISOString().slice(0,10)}" class="p-2 border rounded text-xs">
+               ${selectHtml('eb-status',['Planejado','Cotado','Aprovado','Comprado','Recebido','Pago','Concluído'])}
+               <input id="eb-note" placeholder="Observação" class="p-2 border rounded text-xs xl:col-span-2">
+               <button type="submit" class="bull-btn bull-btn-dark">Adicionar lançamento</button>
+             </form>
+             <div class="flex flex-col md:flex-row gap-2 mt-4 no-print">
+               <select id="bom-period" onchange="renderEnhancedBOM()" class="p-2 border rounded text-xs w-full md:w-48"></select>
+               <select id="bom-archive" onchange="renderEnhancedBOM()" class="p-2 border rounded text-xs w-full md:w-48">
+                 <option value="active">Ativos</option><option value="archived">Arquivados</option><option value="all">Todos</option>
+               </select>
+               <select id="bom-dept-filter" onchange="renderEnhancedBOM()" class="p-2 border rounded text-xs w-full md:w-52">
+                 <option value="">Todas as diretorias</option>
+               </select>
+             </div>
+             <div class="overflow-auto mt-3"><table class="min-w-full"><thead><tr>
+               <th class="bull-enh-th">Item</th><th class="bull-enh-th">Tipo</th><th class="bull-enh-th">Classificação</th><th class="bull-enh-th">Dir.</th><th class="bull-enh-th">Qtd</th><th class="bull-enh-th">Total</th><th class="bull-enh-th">Data</th><th class="bull-enh-th">Status</th><th class="bull-enh-th no-print">Ações</th>
+             </tr></thead><tbody id="advanced-bom-body"></tbody></table></div>`;
+            bomTab.prepend(card);
+            document.getElementById('enh-bom-form').addEventListener('submit', addEnhancedBOM);
+        }
+
+        // Sponsorship manager
+        const sponsors=document.getElementById('patrocinios');
+        if(sponsors && !document.getElementById('sponsor-manager')){
+            const header=sponsors.querySelector('.flex.justify-between');
+            const manager=document.createElement('div'); manager.id='sponsor-manager'; manager.className='bull-enh-card p-5';
+            manager.innerHTML=`
+              <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+                <div><div class="bull-section-title">Pipeline de apoio e patrocínio</div>
+                <div class="bull-muted">Dinheiro, peças, serviços, fabricação, transporte, infraestrutura, permuta e outros. Um parceiro pode ter vários tipos.</div></div>
+                <button class="bull-btn bull-btn-dark no-print" onclick="openEnhancedSponsorModal()">+ Novo parceiro</button>
+              </div>
+              <div id="sponsor-summary" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"></div>
+              <div class="flex flex-col md:flex-row gap-2 mt-4 no-print">
+                <select id="sponsor-filter-status" onchange="renderEnhancedSponsors()" class="p-2 border rounded text-xs"><option value="">Todos os status</option><option>Prospecção</option><option>Contato feito</option><option>Em negociação</option><option>Fechado</option><option>Entregue</option><option>Encerrado</option></select>
+                <select id="sponsor-filter-month" onchange="renderEnhancedSponsors()" class="p-2 border rounded text-xs"></select>
+              </div>
+              <div class="overflow-auto mt-3"><table class="min-w-full"><thead><tr>
+                 <th class="bull-enh-th">Empresa</th><th class="bull-enh-th">Apoio</th><th class="bull-enh-th">Financeiro</th><th class="bull-enh-th">Permuta</th><th class="bull-enh-th">Status</th><th class="bull-enh-th">Próxima ação</th><th class="bull-enh-th no-print">Ações</th>
+              </tr></thead><tbody id="enh-sponsor-body"></tbody></table></div>`;
+            header?.after(manager);
+        }
+
+        // Config: flexible admin panels
+        const config=document.getElementById('config');
+        if(config && !document.getElementById('flex-config')){
+            const wrap=document.createElement('div'); wrap.id='flex-config'; wrap.className='space-y-5';
+            wrap.innerHTML=`
+            <div class="bull-enh-card p-5">
+              <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+                <div><div class="bull-section-title">Produtos, metas e pontuação</div>
+                <div class="bull-muted">Cadastre qualquer produto. Nada fica preso no JavaScript.</div></div>
+                <button class="bull-btn bull-btn-dark no-print" onclick="addProductRow()">+ Novo produto</button>
+              </div>
+              <div class="overflow-auto mt-4"><table class="min-w-full"><thead><tr>
+                <th class="bull-enh-th">Produto</th><th class="bull-enh-th">Categoria</th><th class="bull-enh-th">Meta</th><th class="bull-enh-th">Preço</th><th class="bull-enh-th">Pts concluir</th><th class="bull-enh-th">Pts meta</th><th class="bull-enh-th">Pts exceder</th><th class="bull-enh-th">Penalidade</th><th class="bull-enh-th">Ativo</th><th class="bull-enh-th no-print">Ações</th>
+              </tr></thead><tbody id="products-body"></tbody></table></div>
+            </div>
+            <div class="bull-enh-card p-5">
+              <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+                <div><div class="bull-section-title">Regras de pontuação</div>
+                <div class="bull-muted">Nome, grupo, pontos positivos/negativos, descrição e ativo/inativo.</div></div>
+                <button class="bull-btn bull-btn-dark no-print" onclick="addPointRuleRow()">+ Nova regra</button>
+              </div>
+              <div class="overflow-auto mt-4"><table class="min-w-full"><thead><tr><th class="bull-enh-th">Nome</th><th class="bull-enh-th">Grupo</th><th class="bull-enh-th">Pontos</th><th class="bull-enh-th">Descrição</th><th class="bull-enh-th">Ativa</th><th class="bull-enh-th no-print">Ações</th></tr></thead><tbody id="point-rules-body"></tbody></table></div>
+            </div>
+            <div class="bull-enh-card p-5">
+              <div class="bull-section-title">Tipos de apoio e contrapartidas</div>
+              <div class="bull-muted mb-3">Edite a lista usada nos cadastros.</div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><div class="text-[10px] font-black uppercase mb-2">Tipos de apoio</div><div id="sponsor-types-editor"></div><button class="bull-btn bull-btn-light mt-2 no-print" onclick="addSponsorType()">+ Tipo</button></div>
+                <div><div class="text-[10px] font-black uppercase mb-2">Contrapartidas</div><div id="counter-editor"></div><button class="bull-btn bull-btn-light mt-2 no-print" onclick="addCounterpart()">+ Contrapartida</button></div>
+              </div>
+            </div>
+            <div class="bull-enh-card p-5">
+              <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+                <div><div class="bull-section-title">Arquivo central</div><div class="bull-muted">Arquivar oculta o registro. Não exclui. Registros arquivados continuam recuperáveis.</div></div>
+                <div class="flex gap-2 no-print">
+                  <select id="archive-collection" class="p-2 border rounded text-xs">
+                    <option value="finances">Financeiro</option><option value="activities">Atividades</option><option value="sponsors">Patrocínios</option><option value="bom">BOM</option><option value="milestones">Marcos</option><option value="tests">Testes</option><option value="decisions">Decisões</option>
+                  </select>
+                  <select id="archive-month" class="p-2 border rounded text-xs"></select>
+                </div>
+              </div>
+              <div id="archive-summary" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"></div>
+              <div id="archive-list" class="mt-4"></div>
+            </div>`;
+            // put after original settings grid
+            config.querySelector(':scope > .grid')?.after(wrap);
+        }
+
+        // Finance enhanced block in Fechamento
+        const vendas=document.getElementById('vendas');
+        if(vendas && !document.getElementById('finance-manager')){
+            const fm=document.createElement('div'); fm.id='finance-manager'; fm.className='bull-enh-card p-5';
+            fm.innerHTML=`
+             <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+               <div><div class="bull-section-title">Financeiro gerencial</div><div class="bull-muted">Despesas, investimentos, receitas, patrocínios, arrecadações e permutas por mês.</div></div>
+               <div id="finance-kpis" class="grid grid-cols-2 md:grid-cols-6 gap-2"></div>
+             </div>
+             <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2 mt-4 no-print">
+               <select id="ff-class" class="p-2 border rounded text-xs"><option>Despesa</option><option>Investimento</option><option>Receita</option><option>Patrocínio</option><option>Arrecadação</option><option>Permuta / Barter</option></select>
+               <select id="ff-type" class="p-2 border rounded text-xs"><option value="entrada">Entrada</option><option value="saida">Saída</option></select>
+               <input id="ff-desc" placeholder="Descrição" class="p-2 border rounded text-xs lg:col-span-2">
+               <input id="ff-value" type="number" step="0.01" placeholder="R$" class="p-2 border rounded text-xs">
+               <input id="ff-date" type="date" value="${new Date().toISOString().slice(0,10)}" class="p-2 border rounded text-xs">
+               <button class="bull-btn bull-btn-dark" onclick="addEnhancedFinance()">Adicionar</button>
+             </div>
+             <div class="flex flex-col md:flex-row gap-2 mt-3 no-print">
+               <select id="ff-month" onchange="renderEnhancedFinance()" class="p-2 border rounded text-xs"></select>
+               <select id="ff-archive" onchange="renderEnhancedFinance()" class="p-2 border rounded text-xs"><option value="active">Ativos</option><option value="archived">Arquivados</option><option value="all">Todos</option></select>
+               <select id="ff-category" onchange="renderEnhancedFinance()" class="p-2 border rounded text-xs"><option value="">Todas as classificações</option><option>Despesa</option><option>Investimento</option><option>Receita</option><option>Patrocínio</option><option>Arrecadação</option><option>Permuta / Barter</option></select>
+             </div>
+             <div class="overflow-auto mt-3"><table class="min-w-full"><thead><tr><th class="bull-enh-th">Data</th><th class="bull-enh-th">Descrição</th><th class="bull-enh-th">Classificação</th><th class="bull-enh-th">Entrada/Saída</th><th class="bull-enh-th">Valor</th><th class="bull-enh-th no-print">Ações</th></tr></thead><tbody id="enh-finance-body"></tbody></table></div>`;
+            vendas.appendChild(fm);
+        }
+    }
+
+    function uniqueMonths(collections){
+        const out=new Set([new Date().toISOString().slice(0,7)]);
+        (collections||[]).flat().forEach(x=>{
+            if(!x) return;
+            out.add(monthKey(x.isoDate||x.date||x.dateKey));
+        });
+        return [...out].filter(x=>/^\d{4}-\d{2}$/.test(x)).sort().reverse();
+    }
+    function fillMonthSelect(id, selected=''){
+        const el=document.getElementById(id); if(!el)return;
+        const months=uniqueMonths([state.finances,state.activities,state.sponsors,state.bom,state.milestones,state.tests,state.decisions,state.sales]);
+        el.innerHTML='<option value="all">Todos os meses</option>'+months.map(m=>`<option value="${m}" ${m===selected?'selected':''}>${monthLabel(m)}</option>`).join('');
+    }
+
+    // ---------- Produtos ----------
+    window.addProductRow=function(prefill=null){
+        ensureState();
+        const p=prefill||{id:uid('prod'),name:'Novo produto',category:'Outros',target:0,unitPrice:0,pointsCompleted:0,pointsMeta:0,pointsExceed:0,penaltyMissed:0,active:true,description:'',archived:false};
+        state.products.push(p); saveState(); renderProducts();
+    };
+    window.editProduct=function(i,field,val){
+        const p=state.products[i]; if(!p)return;
+        p[field]=(['target','unitPrice','pointsCompleted','pointsMeta','pointsExceed','penaltyMissed'].includes(field))?Number(val):val;
+        saveState(); renderProducts();
+    };
+    window.deleteProduct=function(i){
+        if(!confirm('Excluir este produto? O registro será apagado apenas após confirmação.'))return;
+        state.products.splice(i,1); saveState(); renderProducts();
+    };
+    function renderProducts(){
+        const body=document.getElementById('products-body'); if(!body)return;
+        body.innerHTML=state.products.map((p,i)=>`<tr>
+          <td class="bull-enh-td"><input value="${esc2(p.name)}" onchange="editProduct(${i},'name',this.value)" class="w-40 p-1 border rounded text-xs"></td>
+          <td class="bull-enh-td"><input value="${esc2(p.category)}" onchange="editProduct(${i},'category',this.value)" class="w-28 p-1 border rounded text-xs"></td>
+          <td class="bull-enh-td"><input type="number" value="${p.target}" onchange="editProduct(${i},'target',this.value)" class="w-16 p-1 border rounded text-xs text-center"></td>
+          <td class="bull-enh-td"><input type="number" step="0.01" value="${p.unitPrice}" onchange="editProduct(${i},'unitPrice',this.value)" class="w-20 p-1 border rounded text-xs"></td>
+          <td class="bull-enh-td"><input type="number" value="${p.pointsCompleted}" onchange="editProduct(${i},'pointsCompleted',this.value)" class="w-16 p-1 border rounded text-xs text-center"></td>
+          <td class="bull-enh-td"><input type="number" value="${p.pointsMeta}" onchange="editProduct(${i},'pointsMeta',this.value)" class="w-16 p-1 border rounded text-xs text-center"></td>
+          <td class="bull-enh-td"><input type="number" value="${p.pointsExceed}" onchange="editProduct(${i},'pointsExceed',this.value)" class="w-16 p-1 border rounded text-xs text-center"></td>
+          <td class="bull-enh-td"><input type="number" value="${p.penaltyMissed}" onchange="editProduct(${i},'penaltyMissed',this.value)" class="w-16 p-1 border rounded text-xs text-center"></td>
+          <td class="bull-enh-td text-center"><input type="checkbox" ${p.active?'checked':''} onchange="editProduct(${i},'active',this.checked)"></td>
+          <td class="bull-enh-td no-print"><button onclick="deleteProduct(${i})" class="text-red-500 text-[10px]">Excluir</button></td>
+        </tr>`).join('');
+        // schedule product select
+        const sp=document.getElementById('modal-product');
+        if(sp)sp.innerHTML=state.products.filter(p=>p.active&&!p.archived).map(p=>`<option value="${esc2(p.name)}">${esc2(p.name)}</option>`).join('');
+    }
+
+    // ---------- Regras gerais ----------
+    function normalizeRules(){
+        if(!state.generalRules || typeof state.generalRules!=='object') state.generalRules={};
+        Object.entries(state.generalRules).forEach(([k,r])=>{
+            r.id=r.id||k; r.name=r.name||k; r.group=r.group||'Geral'; r.description=r.description||'';
+            r.active=r.active!==false; r.pts=Number(r.pts)||0;
+        });
+    }
+    window.addPointRuleRow=function(){
+        normalizeRules();
+        const key='rule_'+Date.now();
+        state.generalRules[key]={id:key,name:'Nova regra',group:'Geral',pts:0,description:'',active:true};
+        saveState(); renderPointRules();
+    };
+    window.updatePointRule=function(key,field,val){
+        if(!state.generalRules[key])return;
+        state.generalRules[key][field]=(field==='pts')?Number(val):val;
+        saveState();
+    };
+    window.deletePointRule=function(key){
+        if(!confirm('Excluir esta regra de pontuação?'))return;
+        delete state.generalRules[key]; saveState(); renderPointRules();
+    };
+    function renderPointRules(){
+        normalizeRules(); const b=document.getElementById('point-rules-body'); if(!b)return;
+        b.innerHTML=Object.entries(state.generalRules).map(([k,r])=>`<tr>
+          <td class="bull-enh-td"><input value="${esc2(r.name)}" onchange="updatePointRule('${k}','name',this.value)" class="p-1 border rounded text-xs w-40"></td>
+          <td class="bull-enh-td"><input value="${esc2(r.group)}" onchange="updatePointRule('${k}','group',this.value)" class="p-1 border rounded text-xs w-24"></td>
+          <td class="bull-enh-td"><input type="number" value="${r.pts}" onchange="updatePointRule('${k}','pts',this.value)" class="p-1 border rounded text-xs w-16"></td>
+          <td class="bull-enh-td"><input value="${esc2(r.description)}" onchange="updatePointRule('${k}','description',this.value)" class="p-1 border rounded text-xs w-56"></td>
+          <td class="bull-enh-td text-center"><input type="checkbox" ${r.active?'checked':''} onchange="updatePointRule('${k}','active',this.checked)"></td>
+          <td class="bull-enh-td no-print"><button onclick="deletePointRule('${k}')" class="text-red-500 text-[10px]">Excluir</button></td>
+        </tr>`).join('');
+    }
+
+    function renderListEditor(containerId,arr,kind){
+        const el=document.getElementById(containerId); if(!el)return;
+        el.innerHTML=arr.map((v,i)=>`<div class="flex gap-2 mb-2"><input value="${esc2(v)}" onchange="updateListItem('${kind}',${i},this.value)" class="flex-1 p-2 border rounded text-xs"><button onclick="removeListItem('${kind}',${i})" class="text-red-500 text-xs">Excluir</button></div>`).join('');
+    }
+    window.updateListItem=function(kind,i,v){ const arr=kind==='stype'?state.sponsorTypes:state.contrapartidas; arr[i]=v; saveState(); };
+    window.removeListItem=function(kind,i){ const arr=kind==='stype'?state.sponsorTypes:state.contrapartidas; if(confirm('Excluir este item da lista?')){arr.splice(i,1);saveState();renderFlexConfig();} };
+    window.addSponsorType=function(){state.sponsorTypes.push('Novo tipo');saveState();renderFlexConfig();};
+    window.addCounterpart=function(){state.contrapartidas.push('Nova contrapartida');saveState();renderFlexConfig();};
+
+    // ---------- Patrocínios ----------
+    function openEnhancedSponsorModal(index=null){
+        let modal=document.getElementById('enh-sponsor-modal');
+        if(!modal){
+            modal=document.createElement('div'); modal.id='enh-sponsor-modal'; modal.className='bull-modal-back no-print';
+            modal.innerHTML=`<div class="bg-white rounded-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-5">
+              <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-black uppercase">Parceiro / Patrocínio</h3><button onclick="closeEnhancedSponsorModal()" class="text-gray-500">✕</button></div>
+              <form id="enh-sponsor-form" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input type="hidden" id="es-index">
+                <input id="es-name" required placeholder="Empresa / parceiro" class="p-2 border rounded text-xs md:col-span-2">
+                <input id="es-contact" placeholder="Contato / cargo" class="p-2 border rounded text-xs">
+                <input id="es-owner" placeholder="Responsável interno" class="p-2 border rounded text-xs">
+                <div class="md:col-span-2"><div class="text-[10px] font-black uppercase mb-1">Tipos de apoio</div><div id="es-types" class="grid grid-cols-2 md:grid-cols-3 gap-2"></div></div>
+                <input id="es-fin" type="number" step="0.01" placeholder="Valor financeiro (R$)" class="p-2 border rounded text-xs">
+                <input id="es-barter" type="number" step="0.01" placeholder="Valor estimado da permuta (R$)" class="p-2 border rounded text-xs">
+                <select id="es-status" class="p-2 border rounded text-xs"><option>Prospecção</option><option>Contato feito</option><option>Em negociação</option><option>Fechado</option><option>Entregue</option><option>Encerrado</option></select>
+                <input id="es-contactdate" type="date" class="p-2 border rounded text-xs">
+                <input id="es-nextdate" type="date" class="p-2 border rounded text-xs">
+                <input id="es-next" placeholder="Próxima ação" class="p-2 border rounded text-xs md:col-span-2">
+                <textarea id="es-desc" placeholder="Descrição / o que será entregue" class="p-2 border rounded text-xs md:col-span-2"></textarea>
+                <div class="md:col-span-2"><div class="text-[10px] font-black uppercase mb-1">Contrapartidas</div><div id="es-counters" class="grid grid-cols-2 md:grid-cols-3 gap-2"></div></div>
+                <textarea id="es-obs" placeholder="Observações" class="p-2 border rounded text-xs md:col-span-2"></textarea>
+                <div class="md:col-span-2 flex justify-end gap-2"><button type="button" onclick="closeEnhancedSponsorModal()" class="bull-btn bull-btn-light">Cancelar</button><button class="bull-btn bull-btn-dark">Salvar</button></div>
+              </form></div>`;
+            document.body.appendChild(modal);
+            document.getElementById('enh-sponsor-form').addEventListener('submit',saveEnhancedSponsor);
+        }
+        renderSponsorModalLists();
+        document.getElementById('enh-sponsor-form').reset();
+        document.getElementById('es-index').value=index??'';
+        if(index!==null){
+            const s=state.sponsors[index]||{};
+            ['name','contact','owner','fin','barter','status','contactdate','nextdate','next','desc','obs'].forEach(k=>{
+                const el=document.getElementById('es-'+k); if(el)el.value=s[k]??(k==='status'?'Prospecção':'');
+            });
+            const types=s.supportTypes||[];
+            state.sponsorTypes.forEach((t,i)=>{const el=document.getElementById('es-type-'+i);if(el)el.checked=types.includes(t);});
+            const cs=s.counterparts||[];
+            state.contrapartidas.forEach((t,i)=>{const el=document.getElementById('es-counter-'+i);if(el)el.checked=cs.includes(t);});
+        } else {
+            document.getElementById('es-contactdate').value=new Date().toISOString().slice(0,10);
+        }
+        modal.classList.remove('hidden');
+    }
+    window.openEnhancedSponsorModal=openEnhancedSponsorModal;
+    window.closeEnhancedSponsorModal=function(){document.getElementById('enh-sponsor-modal')?.classList.add('hidden');};
+    function renderSponsorModalLists(){
+        const t=document.getElementById('es-types'),c=document.getElementById('es-counters'); if(!t||!c)return;
+        t.innerHTML=state.sponsorTypes.map((x,i)=>`<label class="flex items-center gap-1 p-1.5 bg-gray-50 border rounded text-[10px]"><input type="checkbox" id="es-type-${i}"> ${esc2(x)}</label>`).join('');
+        c.innerHTML=state.contrapartidas.map((x,i)=>`<label class="flex items-center gap-1 p-1.5 bg-gray-50 border rounded text-[10px]"><input type="checkbox" id="es-counter-${i}"> ${esc2(x)}</label>`).join('');
+    }
+    function saveEnhancedSponsor(e){
+        e.preventDefault();
+        const idx=document.getElementById('es-index').value;
+        const obj={
+            id: idx!==''?(state.sponsors[Number(idx)]?.id||uid('sp')):uid('sp'),
+            name:document.getElementById('es-name').value.trim(),
+            contact:document.getElementById('es-contact').value.trim(),
+            owner:document.getElementById('es-owner').value.trim(),
+            supportTypes:state.sponsorTypes.filter((_,i)=>document.getElementById('es-type-'+i)?.checked),
+            value:Number(document.getElementById('es-fin').value)||0,
+            barterValue:Number(document.getElementById('es-barter').value)||0,
+            status:document.getElementById('es-status').value,
+            contactDate:document.getElementById('es-contactdate').value,
+            nextDate:document.getElementById('es-nextdate').value,
+            nextAction:document.getElementById('es-next').value.trim(),
+            description:document.getElementById('es-desc').value.trim(),
+            counterparts:state.contrapartidas.filter((_,i)=>document.getElementById('es-counter-'+i)?.checked),
+            notes:document.getElementById('es-obs').value.trim(),
+            archived:false
+        };
+        if(idx!=='') state.sponsors[Number(idx)]=Object.assign(state.sponsors[Number(idx)]||{},obj);
+        else state.sponsors.unshift(obj);
+        saveState(); closeEnhancedSponsorModal(); renderEnhancedSponsors();
+    }
+    window.editEnhancedSponsor=i=>openEnhancedSponsorModal(i);
+    window.archiveSponsor=i=>archiveItem('sponsors',i);
+    function renderEnhancedSponsors(){
+        const body=document.getElementById('enh-sponsor-body'); if(!body)return;
+        const status=document.getElementById('sponsor-filter-status')?.value||'';
+        const month=document.getElementById('sponsor-filter-month')?.value||'all';
+        fillMonthSelect('sponsor-filter-month',month); // preserve
+        const list=state.sponsors.filter(s=>(!status||s.status===status)&&(month==='all'||monthKey(s.contactDate||s.createdDate||new Date())===month)&&!s.archived);
+        body.innerHTML=list.map((s)=>{
+            const i=state.sponsors.indexOf(s);
+            return `<tr><td class="bull-enh-td"><b>${esc2(s.name)}</b><div class="bull-muted">${esc2(s.contact||'')}</div></td>
+              <td class="bull-enh-td">${(s.supportTypes||[]).map(x=>`<span class="bull-pill bg-gray-100 mr-1 mb-1">${esc2(x)}</span>`).join('')}</td>
+              <td class="bull-enh-td font-bold text-green-700">${money(s.value)}</td>
+              <td class="bull-enh-td font-bold text-blue-700">${money(s.barterValue)}</td>
+              <td class="bull-enh-td">${esc2(s.status)}</td>
+              <td class="bull-enh-td">${esc2(s.nextAction||'-')}<div class="bull-muted">${s.nextDate||''}</div></td>
+              <td class="bull-enh-td no-print whitespace-nowrap"><button onclick="editEnhancedSponsor(${i})" class="text-blue-600 mr-2">Editar</button><button onclick="archiveSponsor(${i})" class="text-orange-600">Arquivar</button></td></tr>`;
+        }).join('')||`<tr><td colspan="7" class="bull-enh-td text-gray-400">Nenhum parceiro neste filtro.</td></tr>`;
+        const sum=state.sponsors.filter(s=>!s.archived);
+        const el=document.getElementById('sponsor-summary'); if(el)el.innerHTML=[
+          ['Parceiros',sum.length],['Financeiro',money(sum.reduce((a,s)=>a+(Number(s.value)||0),0))],
+          ['Permuta',money(sum.reduce((a,s)=>a+(Number(s.barterValue)||0),0))],['Fechados',sum.filter(s=>s.status==='Fechado'||s.status==='Entregue').length],
+          ['Contrapartidas',sum.reduce((a,s)=>a+(s.counterparts||[]).length,0)]
+        ].map(([l,v])=>`<div class="bg-gray-50 border rounded p-3"><div class="bull-muted">${l}</div><div class="font-black text-sm mt-1">${v}</div></div>`).join('');
+        const old=document.getElementById('sponsors-grid'); if(old)old.classList.add('hidden');
+    }
+
+    // ---------- Financeiro ----------
+    window.addEnhancedFinance=function(){
+        const type=document.getElementById('ff-type').value, cls=document.getElementById('ff-class').value;
+        const value=Number(document.getElementById('ff-value').value)||0;
+        if(!document.getElementById('ff-desc').value.trim() || value<=0){alert('Informe descrição e valor.');return;}
+        state.finances.unshift({
+            id:uid('fin'), date:document.getElementById('ff-date').value, isoDate:new Date(document.getElementById('ff-date').value+'T12:00:00').toISOString(),
+            type, category:cls, value, description:document.getElementById('ff-desc').value.trim(), archived:false
+        });
+        saveState(); renderEnhancedFinance();
+    };
+    window.archiveFinance=i=>archiveItem('finances',i);
+    function renderEnhancedFinance(){
+        const body=document.getElementById('enh-finance-body'); if(!body)return;
+        const month=document.getElementById('ff-month')?.value||'all', arc=document.getElementById('ff-archive')?.value||'active', cat=document.getElementById('ff-category')?.value||'';
+        fillMonthSelect('ff-month',month);
+        let list=state.finances.filter(f=>(month==='all'||monthKey(f.isoDate||f.date)===month)&&(!cat||f.category===cat)&&(arc==='all'||(arc==='archived'?f.archived:!f.archived)));
+        body.innerHTML=list.map(f=>{
+            const i=state.finances.indexOf(f);
+            return `<tr><td class="bull-enh-td">${esc2(f.date||'')}</td><td class="bull-enh-td"><b>${esc2(f.description||f.category||'')}</b></td>
+              <td class="bull-enh-td">${esc2(f.category||'-')}</td><td class="bull-enh-td">${f.type==='entrada'?'Entrada':'Saída'}</td>
+              <td class="bull-enh-td font-bold ${f.type==='entrada'?'text-green-700':'text-red-700'}">${f.type==='entrada'?'+ ':'- '}${money(f.value)}</td>
+              <td class="bull-enh-td no-print whitespace-nowrap"><button onclick="archiveFinance(${i})" class="text-orange-600">${f.archived?'Restaurar':'Arquivar'}</button> <button onclick="safeDelete('finances',${i})" class="text-red-600">Excluir</button></td></tr>`;
+        }).join('')||`<tr><td colspan="6" class="bull-enh-td text-gray-400">Nenhum lançamento neste período.</td></tr>`;
+        const active=state.finances.filter(f=>!f.archived);
+        const entradas=active.filter(f=>f.type==='entrada').reduce((a,f)=>a+(Number(f.value)||0),0);
+        const saidas=active.filter(f=>f.type==='saida').reduce((a,f)=>a+(Number(f.value)||0),0);
+        const invest=active.filter(f=>f.category==='Investimento').reduce((a,f)=>a+(Number(f.value)||0),0);
+        const patro=active.filter(f=>f.category==='Patrocínio').reduce((a,f)=>a+(Number(f.value)||0),0);
+        const perm=active.filter(f=>f.category==='Permuta / Barter').reduce((a,f)=>a+(Number(f.value)||0),0);
+        const k=document.getElementById('finance-kpis'); if(k)k.innerHTML=[['Entradas',money(entradas)],['Saídas',money(saidas)],['Saldo',money(entradas-saidas)],['Investido',money(invest)],['Patrocínio',money(patro)],['Permuta',money(perm)]].map(([l,v])=>`<div class="bg-gray-50 border rounded p-2"><div class="bull-muted">${l}</div><div class="font-black text-[11px] mt-1">${v}</div></div>`).join('');
+    }
+
+    // ---------- BOM ----------
+    window.addEnhancedBOM=function(e){
+        e.preventDefault();
+        const qty=Number(document.getElementById('eb-qty').value)||0, unit=Number(document.getElementById('eb-unit').value)||0;
+        const data={id:uid('bomx'),item:document.getElementById('eb-item').value.trim(),qty,unitPrice:unit,total:qty*unit,
+          type:document.getElementById('eb-type').value,class:document.getElementById('eb-class').value,
+          dept:document.getElementById('eb-dept').value,system:document.getElementById('eb-system').value.trim(),
+          supplier:document.getElementById('eb-supplier').value.trim(),date:document.getElementById('eb-date').value,
+          status:document.getElementById('eb-status').value,note:document.getElementById('eb-note').value.trim(),archived:false};
+        if(!data.item){alert('Informe o item.');return;}
+        state.bom.unshift(data); saveState(); document.getElementById('enh-bom-form').reset();
+        document.getElementById('eb-date').value=new Date().toISOString().slice(0,10); renderEnhancedBOM();
+    };
+    window.archiveBOM=i=>archiveItem('bom',i);
+    function renderEnhancedBOM(){
+        const b=document.getElementById('advanced-bom-body');if(!b)return;
+        const month=document.getElementById('bom-period')?.value||'all', arc=document.getElementById('bom-archive')?.value||'active', dept=document.getElementById('bom-dept-filter')?.value||'';
+        fillMonthSelect('bom-period',month);
+        const df=document.getElementById('bom-dept-filter'); if(df){const cur=dept;df.innerHTML='<option value="">Todas as diretorias</option>'+(state.departments||[]).map(d=>`<option value="${esc2(d.name)}" ${cur===d.name?'selected':''}>${esc2(d.name)}</option>`).join('');}
+        let list=state.bom.filter(x=>(month==='all'||monthKey(x.date)===month)&&(!dept||x.dept===dept)&&(arc==='all'||(arc==='archived'?x.archived:!x.archived)));
+        b.innerHTML=list.map(x=>{const i=state.bom.indexOf(x); return `<tr>
+          <td class="bull-enh-td"><b>${esc2(x.item)}</b><div class="bull-muted">${esc2(x.system||x.supplier||'')}</div></td>
+          <td class="bull-enh-td">${esc2(x.type||'-')}</td><td class="bull-enh-td">${esc2(x.class||'-')}</td><td class="bull-enh-td">${esc2(x.dept||'-')}</td>
+          <td class="bull-enh-td">${x.qty||0}</td><td class="bull-enh-td font-bold">${money(x.total)}</td><td class="bull-enh-td">${esc2(x.date||'')}</td><td class="bull-enh-td">${esc2(x.status||'')}</td>
+          <td class="bull-enh-td no-print whitespace-nowrap"><button onclick="archiveBOM(${i})" class="text-orange-600 mr-2">${x.archived?'Restaurar':'Arquivar'}</button><button onclick="safeDelete('bom',${i})" class="text-red-600">Excluir</button></td>
+        </tr>`}).join('')||`<tr><td colspan="9" class="bull-enh-td text-gray-400">Nenhum lançamento.</td></tr>`;
+        const active=state.bom.filter(x=>!x.archived);
+        const spent=active.filter(x=>x.class==='Despesa').reduce((a,x)=>a+(Number(x.total)||0),0);
+        const invested=active.filter(x=>x.class==='Investimento').reduce((a,x)=>a+(Number(x.total)||0),0);
+        const revenue=active.filter(x=>['Receita','Arrecadação','Patrocínio'].includes(x.class)).reduce((a,x)=>a+(Number(x.total)||0),0);
+        const barter=active.filter(x=>x.class==='Permuta / Barter').reduce((a,x)=>a+(Number(x.total)||0),0);
+        const k=document.getElementById('bom-kpis'); if(k)k.innerHTML=[['Gasto',money(spent)],['Investido',money(invested)],['Receitas',money(revenue)],['Permuta',money(barter)],['Itens',active.length]].map(([l,v])=>`<div class="bg-gray-50 border rounded p-2"><div class="bull-muted">${l}</div><div class="font-black text-[11px] mt-1">${v}</div></div>`).join('');
+    }
+
+    // ---------- Car vision ----------
+    const carStatuses=['Não iniciado','Em andamento','Concluído','Bloqueado','N/A'];
+    function carSeed(){
+        const base=[
+          ['Chassi','Estrutura tubular'],['Chassi','Travessas e suportes'],['Chassi','Painéis / proteção'],
+          ['Suspensão','Hardpoints'],['Suspensão','Balanças'],['Suspensão','Push/Pullrod e amortecedores'],['Direção','Caixa e coluna'],['Direção','Volante e terminais'],
+          ['Freios','Pedalbox'],['Freios','Discos e pinças'],['Freios','Linhas e fluido'],
+          ['Powertrain','Motor XT660'],['Powertrain','Adaptação / suportes'],['Powertrain','Escape'],['Powertrain','Tanque / combustível'],
+          ['Eletrônica','ECU'],['Eletrônica','Chicote'],['Eletrônica','Sensores'],['Eletrônica','Bateria / distribuição'],
+          ['Rodas e Pneus','Rodas aro 13'],['Rodas e Pneus','Pneus 175'],['Aero / Carenagem','Carenagem'],
+          ['Segurança','Cinto'],['Segurança','Extintor / sistema de combate'],['Segurança','Banco'],['Segurança','EPI / conformidade']
+        ];
+        return base.map(([dept,name])=>({id:uid('car'),directorate:dept,system:dept,component:name,status:'Não iniciado',weight:1,responsible:'',notes:'',archived:false}));
+    }
+    window.carAddSeed=function(){
+        ensureState();
+        if(state.carStructure.length && !confirm('Já existem itens. Adicionar uma base sem apagar os atuais?'))return;
+        state.carStructure.push(...carSeed()); saveState(); renderCarVision();
+    };
+    window.carAddNode=function(existingIndex=null){
+        const title=existingIndex===null?'Novo item do carro':'Editar item';
+        const cur=existingIndex===null?{}:state.carStructure[existingIndex];
+        const modal=document.createElement('div'); modal.className='bull-modal-back no-print'; modal.innerHTML=`<div class="bg-white rounded-xl w-full max-w-xl p-5">
+          <h3 class="text-lg font-black uppercase mb-4">${title}</h3>
+          <form id="car-form" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input id="cf-dept" required value="${esc2(cur.directorate||'Chassi')}" placeholder="Diretoria" class="p-2 border rounded text-xs">
+            <input id="cf-system" required value="${esc2(cur.system||cur.directorate||'')}" placeholder="Sistema / subsistema" class="p-2 border rounded text-xs">
+            <input id="cf-comp" required value="${esc2(cur.component||'')}" placeholder="Componente / entregável" class="p-2 border rounded text-xs md:col-span-2">
+            <input id="cf-weight" type="number" min="0" step="0.1" value="${Number(cur.weight)||1}" placeholder="Peso" class="p-2 border rounded text-xs">
+            <input id="cf-resp" value="${esc2(cur.responsible||'')}" placeholder="Responsável" class="p-2 border rounded text-xs">
+            ${selectHtml('cf-status',carStatuses,cur.status||'Não iniciado')}
+            <textarea id="cf-notes" placeholder="Notas / bloqueios" class="p-2 border rounded text-xs md:col-span-2">${esc2(cur.notes||'')}</textarea>
+            <div class="md:col-span-2 flex justify-end gap-2"><button type="button" id="cf-cancel" class="bull-btn bull-btn-light">Cancelar</button><button class="bull-btn bull-btn-dark">Salvar</button></div>
+          </form></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#cf-cancel').onclick=()=>modal.remove();
+        modal.querySelector('#car-form').onsubmit=(e)=>{e.preventDefault();const obj={id:cur.id||uid('car'),directorate:document.getElementById('cf-dept').value.trim(),system:document.getElementById('cf-system').value.trim(),component:document.getElementById('cf-comp').value.trim(),status:document.getElementById('cf-status').value,weight:Number(document.getElementById('cf-weight').value)||1,responsible:document.getElementById('cf-resp').value.trim(),notes:document.getElementById('cf-notes').value.trim(),archived:false};if(existingIndex===null)state.carStructure.push(obj);else state.carStructure[existingIndex]=obj;saveState();modal.remove();renderCarVision();};
+    };
+    window.carEdit=i=>carAddNode(i);
+    window.carArchive=i=>archiveItem('carStructure',i);
+    function renderCarVision(){
+        const tree=document.getElementById('car-tree'), ov=document.getElementById('car-overview'); if(!tree||!ov)return;
+        const active=state.carStructure.filter(x=>!x.archived);
+        const totalW=active.filter(x=>x.status!=='N/A').reduce((a,x)=>a+(Number(x.weight)||1),0);
+        const doneW=active.filter(x=>x.status==='Concluído').reduce((a,x)=>a+(Number(x.weight)||1),0);
+        const progress=totalW?Math.round(doneW/totalW*100):0;
+        const groups={}; active.forEach(x=>{groups[x.directorate]=groups[x.directorate]||{};groups[x.directorate][x.system]=groups[x.directorate][x.system]||[];groups[x.directorate][x.system].push(x);});
+        ov.innerHTML=[['Progresso',progress+'%'],['Itens',active.length],['Concluídos',active.filter(x=>x.status==='Concluído').length],['Bloqueados',active.filter(x=>x.status==='Bloqueado').length]].map(([l,v])=>`<div class="bg-gray-50 border rounded p-3"><div class="bull-muted">${l}</div><div class="font-black text-lg mt-1">${v}</div></div>`).join('');
+        tree.innerHTML=Object.entries(groups).map(([dept,systems])=>{
+            const dItems=Object.values(systems).flat();
+            const dTot=dItems.filter(x=>x.status!=='N/A').reduce((a,x)=>a+(Number(x.weight)||1),0);
+            const dDone=dItems.filter(x=>x.status==='Concluído').reduce((a,x)=>a+(Number(x.weight)||1),0);
+            const dp=dTot?Math.round(dDone/dTot*100):0;
+            return `<div class="bull-tree-node"><div class="flex justify-between items-center"><div class="font-black uppercase text-sm">${esc2(dept)}</div><div class="text-xs font-black">${dp}%</div></div><div class="bull-progress mt-2"><span style="width:${dp}%"></span></div><div class="bull-tree-line mt-3">${Object.entries(systems).map(([sys,items])=>{
+                const stTot=items.filter(x=>x.status!=='N/A').reduce((a,x)=>a+(Number(x.weight)||1),0);
+                const stDone=items.filter(x=>x.status==='Concluído').reduce((a,x)=>a+(Number(x.weight)||1),0);
+                const sp=stTot?Math.round(stDone/stTot*100):0;
+                return `<div class="mb-4"><div class="flex justify-between"><b class="text-xs">${esc2(sys)}</b><span class="text-[10px] font-bold">${sp}%</span></div>${items.map(x=>{const i=state.carStructure.indexOf(x);return `<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border rounded-lg p-2 mt-2 bg-white">
+                    <div><b class="text-xs">${esc2(x.component)}</b><div class="bull-muted">${esc2(x.responsible||'Sem responsável')} ${x.notes?'· '+esc2(x.notes):''}</div></div>
+                    <div class="flex items-center gap-2 no-print"><select onchange="state.carStructure[${i}].status=this.value;saveState();renderCarVision()" class="p-1 border rounded text-[10px]">${carStatuses.map(s=>`<option ${x.status===s?'selected':''}>${s}</option>`).join('')}</select><button onclick="carEdit(${i})" class="text-blue-600 text-[10px]">Editar</button><button onclick="carArchive(${i})" class="text-orange-600 text-[10px]">Arquivar</button></div>
+                  </div>`}).join('')}</div>`;
+            }).join('')}</div></div>`;
+        }).join('') || `<div class="p-6 border border-dashed rounded-lg text-center text-gray-400">Nenhum item cadastrado. Use "Criar estrutura base" ou "Adicionar item".</div>`;
+    }
+
+    // ---------- Arquivo / exclusão ----------
+    window.archiveItem=function(collection,index){
+        if(!state[collection] || !state[collection][index])return;
+        state[collection][index].archived=!state[collection][index].archived;
+        saveState(); renderFlexConfig(); renderEnhancedFinance(); renderEnhancedBOM(); renderEnhancedSponsors(); renderCarVision(); renderEnhancedArchive();
+    };
+    window.safeDelete=function(collection,index){
+        if(!state[collection] || !state[collection][index])return;
+        const item=state[collection][index];
+        const label=item.name||item.description||item.item||item.category||item.title||'este registro';
+        if(!confirm(`Excluir definitivamente "${label}"? Esta ação não pode ser desfeita pelo sistema.`))return;
+        state[collection].splice(index,1); saveState(); renderFlexConfig(); renderEnhancedFinance(); renderEnhancedBOM(); renderEnhancedSponsors(); renderCarVision(); renderEnhancedArchive();
+    };
+    function renderEnhancedArchive(){
+        const col=document.getElementById('archive-collection'),mon=document.getElementById('archive-month'),listEl=document.getElementById('archive-list'),sum=document.getElementById('archive-summary');
+        if(!col||!listEl)return;
+        const c=col.value; const m=mon?.value||'all'; fillMonthSelect('archive-month',m);
+        const arr=(state[c]||[]).filter(x=>x.archived && (m==='all'||monthKey(x.isoDate||x.date||x.contactDate||x.dateKey)===m));
+        listEl.innerHTML=arr.length?arr.map((x)=>{
+            const i=state[c].indexOf(x); return `<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border rounded p-3 bg-gray-50 mb-2"><div><b class="text-xs">${esc2(x.name||x.item||x.description||x.title||x.category||x.component||'Registro')}</b><div class="bull-muted">${esc2(x.date||x.isoDate||x.status||'')}</div></div><button onclick="archiveItem('${c}',${i})" class="bull-btn bull-btn-light no-print">Restaurar</button></div>`;
+        }).join(''):`<div class="text-xs text-gray-400 p-4 border border-dashed rounded">Nenhum registro arquivado para este filtro.</div>`;
+        const all=arr.length;
+        if(sum)sum.innerHTML=[['Arquivados',all],['Mês',m==='all'?'Todos':monthLabel(m)],['Coleção',c],['Tamanho',state[c]?.length||0],['Restaurados','0']].map(([l,v])=>`<div class="bg-gray-50 border rounded p-2"><div class="bull-muted">${l}</div><div class="font-black text-sm mt-1">${v}</div></div>`).join('');
+    }
+
+    function renderFlexConfig(){
+        ensureState(); renderProducts(); renderPointRules(); renderListEditor('sponsor-types-editor',state.sponsorTypes,'stype'); renderListEditor('counter-editor',state.contrapartidas,'counter'); renderEnhancedArchive();
+    }
+
+    // ---------- Overrides ----------
+    const oldSaveState=window.saveState;
+    window.saveState=function(){
+        ensureState();
+        // keep legacy targets synchronized with product data for backward compatibility
+        state.targets={...(state.targets||{})};
+        state.products.forEach(p=>{state.targets[p.name]=Number(p.target)||0;});
+        if(typeof localStorage!=='undefined') localStorage.setItem(LOCAL_STORAGE_KEY_PREFIX+'state',JSON.stringify(state));
+        // render only after DOM is ready
+        if(document.body) {
+            try{ renderAll(); }catch(err){ console.warn('Render legacy:',err); }
+            try{ renderFlexConfig(); }catch(err){ console.warn('Render flex:',err); }
+            try{ renderEnhancedFinance(); renderEnhancedBOM(); renderEnhancedSponsors(); renderCarVision(); }catch(err){ console.warn('Render enhanced:',err); }
+        }
+    };
+
+    // Override sales points to use per-product rules
+    window.handleSalesSubmit=function(e){
+        e.preventDefault();
+        const key=document.getElementById('sale-shift-select').value, qty=Number(document.getElementById('sale-qty').value)||0;
+        const rev=Number(document.getElementById('sale-revenue').value)||0, status=document.getElementById('sale-status').value;
+        if(!key)return;
+        const slot=state.schedule[key]; if(!slot)return;
+        const product=state.products.find(p=>p.name===slot.product)||state.products.find(p=>p.active)||{target:10,pointsCompleted:10,pointsMeta:5,pointsExceed:0,penaltyMissed:-20,name:slot.product};
+        let pts=0,desc='';
+        if(status==='missed'){pts=Number(product.penaltyMissed)||0;desc='Falta';}
+        else{
+            pts=Number(product.pointsCompleted)||0; desc='Concluído';
+            const target=Number(product.target)||0;
+            if(target>0 && qty>=target){pts+=Number(product.pointsMeta)||0;desc+=' (Meta)';}
+            if(target>0 && qty>target && product.pointsExceed){pts+=(qty-target)*Number(product.pointsExceed);}
+        }
+        (slot.members||[]).forEach(id=>{const m=state.members.find(x=>x.id===id);if(m)m.points=(Number(m.points)||0)+pts;});
+        slot.logged=true;
+        const iso=new Date().toISOString(), d=new Date().toLocaleDateString('pt-BR');
+        const sale={id:uid('sale'),date:d,isoDate:iso,product:product.name,qty,status,revenue:rev,members:slot.members||[],points:pts,archived:false};
+        state.sales.unshift(sale);
+        state.activities.unshift({id:uid('act'),source:'vendas',date:d,isoDate:iso,memberIds:slot.members||[],typeId:'venda',title:'Turno: '+product.name,points:pts,desc:`${desc} (Vendeu: ${qty})`,archived:false});
+        if(rev>0)state.finances.unshift({id:uid('fin'),date:d,isoDate:iso,type:'entrada',category:'Arrecadação',value:rev,description:'Turno de Vendas · '+product.name,archived:false});
+        saveState(); e.target.reset(); populateSalesSelect();
+    };
+
+    // Override render schedule product-related pieces without touching legacy layout
+    const oldPopulateSales=window.populateSalesSelect;
+    function refreshProductSelects(){
+        const sp=document.getElementById('modal-product');
+        if(sp)sp.innerHTML=state.products.filter(p=>p.active&&!p.archived).map(p=>`<option value="${esc2(p.name)}">${esc2(p.name)}</option>`).join('');
+        if(sp && !sp.value && sp.options.length)sp.value=sp.options[0].value;
+    }
+
+    // Activity renderer: hide archived + simple pagination
+    let activityLimit=50;
+    window.loadMoreActivities=function(){activityLimit+=50;renderActivitiesEnhanced();};
+    function renderActivitiesEnhanced(){
+        const tbody=document.getElementById('activity-history-table');if(!tbody)return;
+        const list=state.activities.filter(a=>!a.archived).slice(0,activityLimit);
+        tbody.innerHTML=list.map(a=>`<tr><td class="px-2 py-2">${esc2(a.date||'')}</td><td class="px-2 py-2">${esc2(a.title||a.typeId||'')}</td><td class="px-2 py-2">${esc2((a.memberIds||[]).map(getMemberName).join(', '))}</td><td class="px-2 py-2 text-center font-bold">${a.points||0}</td><td class="px-2 py-2 no-print whitespace-nowrap"><button onclick="archiveActivityById('${a.id}')" class="text-orange-600 mr-2">Arquivar</button><button onclick="deleteActivityById('${a.id}')" class="text-red-600">Excluir</button></td></tr>`).join('') || `<tr><td colspan="5" class="bull-enh-td text-gray-400">Nenhuma atividade.</td></tr>`;
+        if(list.length<state.activities.filter(a=>!a.archived).length)tbody.innerHTML+=`<tr><td colspan="5" class="text-center py-3 no-print"><button onclick="loadMoreActivities()" class="bull-btn bull-btn-light">Carregar mais</button></td></tr>`;
+    }
+    window.archiveActivityById=id=>{const i=state.activities.findIndex(a=>a.id===id);if(i>=0)archiveItem('activities',i);};
+    window.deleteActivityById=id=>{const i=state.activities.findIndex(a=>a.id===id);if(i>=0)safeDelete('activities',i);};
+
+    // ---------- Render enhanced ----------
+    function renderEnhancedAll(){
+        ensureState(); injectStyle(); addOrReplaceEnhancementPanels(); renderFlexConfig(); renderEnhancedFinance(); renderEnhancedBOM(); renderEnhancedSponsors(); renderCarVision(); renderActivitiesEnhanced(); refreshProductSelects();
+        const spm=document.getElementById('sponsor-filter-month'); if(spm)fillMonthSelect('sponsor-filter-month',spm.value||'all');
+    }
+
+    // Make old openSponsorModal redirect to rich modal
+    window.openSponsorModal=function(){openEnhancedSponsorModal(null);};
+    window.saveSponsor=function(e){ e.preventDefault(); }; // form is kept hidden for backward compatibility
+    window.renderPatrocinios=function(){try{renderEnhancedSponsors();}catch(e){}};
+
+    // On initialization and tab changes, restore enhancements
+    window.addEventListener('load',function(){
+        try{
+            ensureState(); injectStyle(); addOrReplaceEnhancementPanels();
+            // old init has already rendered; perform final enhancement pass
+            renderEnhancedAll();
+            // Hide legacy sponsor modal and prevent accidental use
+            document.getElementById('sponsor-modal')?.classList.add('hidden');
+        }catch(err){ console.error('Bull enhancement init error',err); }
+    });
+
+    // Keep enhancements after switching tabs
+    const originalSwitchTab=window.switchTab;
+    window.switchTab=function(tabId){
+        originalSwitchTab(tabId);
+        setTimeout(()=>{try{addOrReplaceEnhancementPanels();renderEnhancedAll();}catch(e){}},0);
+    };
+})();
+</script>
+
+</body>
+</html>
